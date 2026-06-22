@@ -100,8 +100,6 @@
         .habit-container { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background: white; overflow-x: auto; margin-bottom: 30px; }
         .habit-container h3 { margin-top: 0; color: #1e293b; margin-bottom: 20px; }
         .habit-row { display: flex; align-items: center; margin-bottom: 12px; min-width: 480px; box-sizing: border-box; }
-        
-        /* FIX ALIGNMENT HABIT CHUẨN XÁC 100% */
         .habit-input { flex: 1 1 0%; min-width: 0; padding: 10px; border: 1px dashed #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; margin-right: 20px; box-sizing: border-box; }
         .habit-spacer { flex: 1 1 0%; min-width: 0; margin-right: 20px; }
         .habit-input:focus { border-color: var(--primary); background: #eff6ff; }
@@ -167,6 +165,7 @@
             .finance-col { min-height: auto; padding: 15px;}
             
             /* WEEKLY COMPACT (TỐI GIẢN) */
+            .weekly-date-range { font-size: 14px; padding: 6px 10px; } /* FIX LỖI NHẢY 2 DÒNG */
             .matrix-container { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; }
             .matrix-box { padding: 12px; border-radius: 8px; }
             .matrix-box h4 { font-size: 14px; margin-bottom: 8px; padding-bottom: 4px; }
@@ -234,10 +233,10 @@
                 <input type="text" id="woy-input" class="woy-input" placeholder="Ví dụ: KỶ LUẬT, CÂN BẰNG..." oninput="saveYearly()">
             </div>
             <div class="goal-matrix">
-                <div class="goal-card g-career"><h4>🩺 Sự nghiệp & Học tập</h4><div id="g-list-career"></div></div>
-                <div class="goal-card g-finance"><h4>💰 Tài chính cá nhân</h4><div id="g-list-finance"></div></div>
-                <div class="goal-card g-health"><h4>🌱 Sức khỏe & Đời sống</h4><div id="g-list-health"></div></div>
-                <div class="goal-card g-hobby"><h4>🎮 Giải trí & Sở thích</h4><div id="g-list-hobby"></div></div>
+                <div class="goal-card g-career"><h4> Sự nghiệp & Học tập</h4><div id="g-list-career"></div></div>
+                <div class="goal-card g-finance"><h4> Tài chính cá nhân</h4><div id="g-list-finance"></div></div>
+                <div class="goal-card g-health"><h4> Sức khỏe & Đời sống</h4><div id="g-list-health"></div></div>
+                <div class="goal-card g-hobby"><h4> Giải trí & Sở thích</h4><div id="g-list-hobby"></div></div>
             </div>
         </div>
 
@@ -260,11 +259,11 @@
 
         <div id="weekly" class="planner-section">
             <div class="weekly-header">
-                <div class="weekly-date-range" id="weekly-date-range">Từ ngày: ... đến ngày: ...</div>
+                <div class="weekly-date-range" id="weekly-date-range">...</div>
             </div>
             
             <div class="habit-container">
-                <h3>🔄 HABIT TRACKER</h3>
+                <h3> HABIT TRACKER</h3>
                 <div id="habit-list"></div>
             </div>
 
@@ -303,7 +302,7 @@
         </div>
 
         <div id="finance" class="planner-section">
-            <h2>💰 Quản lý Tài chính Cá nhân</h2>
+            <h2> 💰 Quản lý Tài chính Cá nhân</h2>
             <div class="finance-layout">
                 <div class="finance-col">
                     <div class="fin-tab-bar">
@@ -472,7 +471,19 @@
             return `weekly_${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
         }
 
-        function setupWeeklyDates() { const today = new Date(); const dayOfWeek = today.getDay(); const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; const monday = new Date(today); monday.setDate(today.getDate() + distanceToMonday); const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); const formatDate = (date) => `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`; document.getElementById('weekly-date-range').innerText = `Từ ngày: ${formatDate(monday)} đến ngày: ${formatDate(sunday)}`; }
+        function setupWeeklyDates() { 
+            const today = new Date(); 
+            const dayOfWeek = today.getDay(); 
+            const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; 
+            const monday = new Date(today); 
+            monday.setDate(today.getDate() + distanceToMonday); 
+            const sunday = new Date(monday); 
+            sunday.setDate(monday.getDate() + 6); 
+            const formatDate = (date) => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`; 
+            
+            // CẬP NHẬT RÚT GỌN HIỂN THỊ NGÀY THÁNG TRONG TUẦN
+            document.getElementById('weekly-date-range').innerText = `${formatDate(monday)} - ${formatDate(sunday)}`; 
+        }
         
         function renderMatrix() { 
             const matrixData = [ { id: 'q1', title: '🔥 Quan trọng & Khẩn cấp' }, { id: 'q3', title: '⚡ Khẩn cấp, Ko quan trọng' }, { id: 'q2', title: '🌱 Quan trọng, Ko khẩn cấp' }, { id: 'q4', title: '☕ Ko quan trọng, Ko khẩn cấp' } ]; 
@@ -544,7 +555,7 @@
         }
 
         function cycleTagColor(btn) { const colors = ['', 'tag-red', 'tag-yellow', 'tag-green', 'tag-blue']; let currentClass = ''; colors.forEach(c => { if(c && btn.classList.contains(c)) currentClass = c; }); let nextIndex = (colors.indexOf(currentClass) + 1) % colors.length; colors.forEach(c => { if(c) btn.classList.remove(c); }); if(colors[nextIndex]) btn.classList.add(colors[nextIndex]); saveMonthly(); }
-        function cycleIcon(btn) { const icons = ['📌', '✈️', '🎂', '🏥', '💰', '☕', '🎉', '🏋️']; let current = btn.innerText; let nextIndex = (icons.indexOf(current) + 1) % icons.length; btn.innerText = icons[nextIndex]; if(icons[nextIndex] !== '📌') { btn.style.opacity = "1"; btn.style.transform = "scale(1.2)"; } else { btn.style.opacity = "0.3"; btn.style.transform = "scale(1)"; } saveMonthly(); }
+        function cycleIcon(btn) { const icons = ['📌', '✈️', '🎂', '🏥', '💰', '☕', '🎉', '🏋️','📆']; let current = btn.innerText; let nextIndex = (icons.indexOf(current) + 1) % icons.length; btn.innerText = icons[nextIndex]; if(icons[nextIndex] !== '📌') { btn.style.opacity = "1"; btn.style.transform = "scale(1.2)"; } else { btn.style.opacity = "0.3"; btn.style.transform = "scale(1)"; } saveMonthly(); }
 
         // --- DAILY PLANNER (7 NGÀY) ---
         let currentDailyDate = new Date();
