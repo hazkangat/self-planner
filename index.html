@@ -123,7 +123,7 @@
 
         /* HABIT REVIEW MODAL */
         #habit-review-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:10001; justify-content:center; align-items:center; backdrop-filter: blur(4px); }
-        .modal-content { background:white; padding:25px; border-radius:16px; width:90%; max-width:550px; max-height:85vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .modal-content { background:white; padding:25px; border-radius:16px; width:90%; max-width:560px; max-height:85vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .stat-badge { background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 12px; color: #475569; display: inline-flex; align-items: center; gap: 4px;}
 
         /* DAILY PLANNER CSS */
@@ -253,9 +253,9 @@
         <span id="cloud-badge-text">Đang kết nối</span>
     </div>
 
-    <div id="habit-review-modal">
+    <div id="habit-review-modal" onclick="if(event.target===this) closeHabitReview()">
         <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #e2e8f0; padding-bottom:10px; position:sticky; top:0; background:white; z-index:1;">
                 <h3 style="margin:0; color:var(--primary);">📊 Tổng quan Thói quen</h3>
                 <button onclick="closeHabitReview()" style="border:none; background:#f1f5f9; color:#64748b; width:30px; height:30px; border-radius:50%; font-size:14px; cursor:pointer; font-weight:bold;">✖</button>
             </div>
@@ -624,41 +624,60 @@
             document.getElementById('habit-review-modal').style.display = 'flex';
             const wData = cloudState[getWeeklyKey()] || {habits:[]};
             let html = '';
-            const now = new Date(); const currentMonth = now.getMonth(); const currentYear = now.getFullYear();
 
             wData.habits.forEach(h => {
                 if(!h.text.trim()) return;
-                let allTimeChecked = 0, allTimeTotal = 0; let monthChecked = 0, monthTotal = 0; let weekChecked = 0, weekTotal = 7;
-                h.days.forEach(d => { if(d) weekChecked++; });
-                
+                let allTimeChecked = 0, allTimeTotal = 0;
+                let weekHistory = [];
                 for(let key in cloudState) {
                     if(key.startsWith('weekly_')) {
                         const weekData = cloudState[key];
                         const dateParts = key.split('_')[1].split('-');
-                        const wYear = parseInt(dateParts[0]); const wMonth = parseInt(dateParts[1]) - 1;
+                        const wYear = parseInt(dateParts[0]); const wMonth = parseInt(dateParts[1]) - 1; const wDay = parseInt(dateParts[2]);
                         const habitMatch = (weekData.habits || []).find(hx => hx.text.trim().toLowerCase() === h.text.trim().toLowerCase());
                         if(habitMatch) {
                             allTimeTotal += 7; let wCheck = 0;
                             habitMatch.days.forEach(d => { if(d) { allTimeChecked++; wCheck++; } });
-                            if(wYear === currentYear && wMonth === currentMonth) { monthTotal += 7; monthChecked += wCheck; }
+                            const startDate = new Date(wYear, wMonth, wDay);
+                            const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6);
+                            const pctVal = Number.isFinite(wCheck) ? Math.round((wCheck/7)*100) : 0;
+                            weekHistory.push({ startDate, endDate, pct: pctVal });
                         }
                     }
                 }
-                
-                const wPct = Math.round((weekChecked/weekTotal)*100) || 0;
-                const mPct = monthTotal ? Math.round((monthChecked/monthTotal)*100) : 0;
-                const aPct = allTimeTotal ? Math.round((allTimeChecked/allTimeTotal)*100) : 0;
-                const bgColor = (h.color || '#94a3b8') + '1A'; 
-                
+                weekHistory = weekHistory.filter(w => Number.isFinite(w.pct) && w.startDate instanceof Date && !isNaN(w.startDate.getTime()) && !isNaN(w.endDate.getTime()));
+                weekHistory.sort((a,b) => a.startDate - b.startDate);
+                const recentWeeks = weekHistory.slice(-4); // 4 tuần gần nhất
+
+                const aPct = (allTimeTotal && Number.isFinite(allTimeChecked/allTimeTotal)) ? Math.round((allTimeChecked/allTimeTotal)*100) : 0;
+                const bgColor = (h.color || '#94a3b8') + '1A';
+                const fmt = (d) => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+
+                let barsHtml = recentWeeks.map((w, idx) => {
+                    const isLast = idx === recentWeeks.length - 1;
+                    const label = `${fmt(w.startDate)}-${fmt(w.endDate)}`;
+                    return `<div style="display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; min-width:0;" title="Tuần ${label}: ${w.pct}%">
+                        <span style="font-size:10px; font-weight:bold; color:${h.color};">${w.pct}%</span>
+                        <div style="width:18px; height:32px; display:flex; align-items:flex-end; background:rgba(255,255,255,0.6); border-radius:3px; overflow:hidden;">
+                            <div style="width:100%; height:${Math.max(w.pct,4)}%; background:${h.color}; opacity:${isLast ? 1 : 0.55}; transition:height 0.3s;"></div>
+                        </div>
+                        <span style="font-size:9px; color:#94a3b8; white-space:nowrap;">${label}</span>
+                    </div>`;
+                }).join('');
+                if(!barsHtml) barsHtml = '<div style="font-size:12px; color:#94a3b8; font-style:italic; padding:6px 0;">Chưa có dữ liệu</div>';
+
                 html += `
-                <div style="margin-bottom:15px; padding:15px; border:1px solid #e2e8f0; background:${bgColor}; border-left:5px solid ${h.color}; border-radius:10px;">
-                    <div style="font-weight:bold; margin-bottom:12px; font-size:16px; color:#1e293b;">${h.text}</div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-                        <span class="stat-badge">Tuần này: <b style="color:var(--primary);">${wPct}%</b></span>
-                        <span class="stat-badge">Tháng này: <b style="color:var(--primary);">${mPct}%</b></span>
-                        <span class="stat-badge">Tổng quát: <b style="color:var(--primary);">${aPct}%</b></span>
+                <div style="margin-bottom:14px; padding:15px; border:1px solid #e2e8f0; background:${bgColor}; border-left:5px solid ${h.color}; border-radius:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:120px;">
+                            <div style="font-weight:bold; margin-bottom:8px; font-size:16px; color:#1e293b;">${h.text}</div>
+                            <span class="stat-badge">🏆 Toàn thời gian: <b style="color:var(--primary);">${aPct}%</b></span>
+                            <div class="progress-track" style="background:rgba(255,255,255,0.7); border:1px solid #e2e8f0; margin-top:8px;">
+                                <div class="progress-fill" style="width: ${aPct}%; background-color: ${h.color};"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:flex-end;">${barsHtml}</div>
                     </div>
-                    <div class="progress-track" style="background:rgba(255,255,255,0.7); border:1px solid #e2e8f0;"><div class="progress-fill" style="width: ${aPct}%; background-color: ${h.color};"></div></div>
                 </div>`;
             });
             if(!html) html = '<p style="text-align:center; color:#94a3b8; font-style:italic;">Chưa có thói quen nào được định nghĩa trong tuần này.</p>';
