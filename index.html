@@ -219,13 +219,13 @@
             .habit-left-col { width: 100%; }
             .habit-circles-panel { display: none !important; }
             .matrix-wrapper { width: 100%; }
-            .habit-container { padding: 12px 10px; margin-bottom: 12px; overflow-x: visible; width: 100%; box-sizing: border-box; } 
-            .habit-header-bar { margin-bottom: 12px; min-width: 0; }
+            .habit-container { padding: 12px 10px; margin-bottom: 12px; overflow-x: auto; width: 100%; box-sizing: border-box; }
+            .habit-header-bar { min-width: 480px; margin-bottom: 12px; }
             .habit-header-bar h3 { font-size: 14px; }
-            
-            .habit-row { width: 100%; box-sizing: border-box; margin-bottom: 10px; gap: 6px; min-width: 0; } 
-            .habit-card-left { padding: 6px 8px; gap: 6px; width: 38%; flex: 0 0 38%; min-width: 0; }
-            .habit-spacer { width: 38%; flex: 0 0 38%; }
+
+            .habit-row { width: auto; min-width: 480px; box-sizing: border-box; margin-bottom: 10px; gap: 6px; }
+            .habit-card-left { padding: 6px 10px; gap: 6px; width: 180px; flex: 0 0 180px; min-width: 0; }
+            .habit-spacer { width: 180px; flex: 0 0 180px; }
             .habit-card-clickable { min-width: 0; gap: 5px; }
             .habit-card-title-display { min-width: 0; font-size: 12px; }
             .habit-checkboxes { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; flex: 1 1 0%; min-width: 0; align-items: center; }
@@ -303,10 +303,18 @@
             </div>
             <div style="margin-bottom:24px;">
                 <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:12px;">Màu sắc</label>
-                <div id="habit-edit-colors" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+                <div id="habit-edit-colors" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;"></div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <label style="font-size:12px; color:#64748b; white-space:nowrap;">Màu tuỳ chỉnh:</label>
+                    <input type="color" id="habit-edit-custompicker" value="#94a3b8"
+                        style="width:40px; height:36px; border:1.5px solid #e2e8f0; border-radius:8px; padding:2px; cursor:pointer; background:none;"
+                        oninput="document.querySelectorAll('.habit-edit-color-swatch').forEach(s=>s.style.borderColor='transparent'); this.style.borderColor='var(--primary)';">
+                    <span style="font-size:12px; color:#94a3b8;">← Chọn màu bất kỳ</span>
+                </div>
             </div>
             <div style="display:flex; gap:10px;">
-                <button onclick="saveHabitEdit()" style="flex:1; background:var(--primary); color:white; border:none; padding:11px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='var(--primary)'">💾 Lưu</button>
+                <button onclick="saveHabitEdit()" style="flex:1; background:var(--primary); color:white; border:none; padding:11px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='var(--primary)'">💾 Lưu</button>
+                <button onclick="if(confirm('Xoá thói quen này?')) deleteHabit(editingHabitIndex)" style="background:#fee2e2; color:#ef4444; border:none; padding:11px 14px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">🗑️</button>
                 <button onclick="closeHabitEdit()" style="flex:1; background:#f1f5f9; color:#64748b; border:none; padding:11px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">Huỷ</button>
             </div>
         </div>
@@ -615,7 +623,7 @@
         function renderHabits() {
             const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
             const wData = cloudState[getWeeklyKey()] || { matrix: {}, habits: [] };
-            while(wData.habits.length < 5) wData.habits.push({text: "", color: "#94a3b8", days: [false,false,false,false,false,false,false]});
+            if(!wData.habits) wData.habits = [];
 
             let html = `<div class="habit-row" style="margin-bottom: 4px;"><div class="habit-spacer"></div><div class="habit-checkboxes">${days.map(d => `<div class="habit-day-label">${d}</div>`).join('')}</div></div>`;
 
@@ -628,7 +636,6 @@
                     <div class="habit-card-left" id="habit-card-left-${i}" style="background-color: ${bgColor}; border-left: 3px solid ${color};">
                         <span class="drag-handle" style="color: ${color};">☰</span>
                         <div class="habit-card-clickable" onclick="openHabitEdit(${i})">
-                            <div class="habit-color-dot" style="background:${color};"></div>
                             <span class="habit-card-title-display" style="color: ${h.text.trim() ? '#1e293b' : '#94a3b8'};">${displayText}</span>
                             <span style="font-size:11px; color:#94a3b8; flex-shrink:0;">✏️</span>
                         </div>
@@ -641,8 +648,31 @@
                 html += `   </div>
                 </div>`;
             });
+
+            // Nút thêm mới
+            html += `<div style="margin-top:10px;">
+                <button onclick="addHabit()" style="background:var(--primary); color:white; border:none; padding:7px 14px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;">➕ Thêm thói quen</button>
+            </div>`;
+
             document.getElementById('habit-list').innerHTML = html;
             renderHabitCircles(wData.habits);
+        }
+
+        function addHabit() {
+            const wData = cloudState[getWeeklyKey()] || {habits:[]};
+            wData.habits.push({text: '', color: '#94a3b8', days: [false,false,false,false,false,false,false]});
+            pushToCloud(getWeeklyKey(), wData);
+            renderHabits();
+            // Mở ngay modal edit cho habit mới
+            openHabitEdit(wData.habits.length - 1);
+        }
+
+        function deleteHabit(index) {
+            const wData = cloudState[getWeeklyKey()] || {habits:[]};
+            wData.habits.splice(index, 1);
+            pushToCloud(getWeeklyKey(), wData);
+            closeHabitEdit();
+            renderHabits();
         }
 
         let dragHabitIndex = null;
@@ -699,11 +729,12 @@
             const wData = cloudState[getWeeklyKey()] || {habits:[]};
             const h = wData.habits[index] || {text:'', color:'#94a3b8'};
             document.getElementById('habit-edit-text').value = h.text;
+            document.getElementById('habit-edit-custompicker').value = h.color || '#94a3b8';
 
             let swatchHtml = '';
             HABIT_COLORS.forEach(c => {
                 const isSelected = (h.color || '#94a3b8') === c.hex;
-                swatchHtml += `<div class="habit-edit-color-swatch" style="background:${c.hex}; border-color:${isSelected ? '#1e293b' : 'transparent'};" title="${c.name.replace(/./u, '').trim()}" onclick="selectEditColor('${c.hex}')"></div>`;
+                swatchHtml += `<div class="habit-edit-color-swatch" style="background:${c.hex}; border-color:${isSelected ? '#1e293b' : 'transparent'};" onclick="selectEditColor('${c.hex}')"></div>`;
             });
             document.getElementById('habit-edit-colors').innerHTML = swatchHtml;
             document.getElementById('habit-edit-modal').style.display = 'flex';
@@ -714,12 +745,15 @@
             document.querySelectorAll('.habit-edit-color-swatch').forEach(s => {
                 s.style.borderColor = (s.style.background === hex || s.style.backgroundColor === hex) ? '#1e293b' : 'transparent';
             });
+            document.getElementById('habit-edit-custompicker').value = hex;
         }
 
         function saveHabitEdit() {
             const wData = cloudState[getWeeklyKey()] || {habits:[]};
+            // Ưu tiên swatch được chọn, nếu không lấy color picker
             const selectedSwatch = [...document.querySelectorAll('.habit-edit-color-swatch')].find(s => s.style.borderColor === 'rgb(30, 41, 59)');
-            const newColor = selectedSwatch ? selectedSwatch.style.background : (wData.habits[editingHabitIndex]?.color || '#94a3b8');
+            const pickerColor = document.getElementById('habit-edit-custompicker').value;
+            const newColor = selectedSwatch ? selectedSwatch.style.background : pickerColor;
             wData.habits[editingHabitIndex].text = document.getElementById('habit-edit-text').value;
             wData.habits[editingHabitIndex].color = newColor;
             pushToCloud(getWeeklyKey(), wData);
