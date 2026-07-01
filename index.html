@@ -491,11 +491,22 @@
                     
                     <div id="fin-day-view" class="fin-sub-section active"></div>
 
-                    <div id="fin-week-view" class="fin-sub-section" style="justify-content: center;">
-                        <div class="fin-stat-box" id="week-stat-box">
-                            <h4 style="margin:0; color:inherit;">Tổng Chi phí linh hoạt (Tuần này)</h4>
-                            <div class="fin-stat-num" id="week-flex-total" style="color:inherit;">0đ</div>
-                            <p style="margin:0; font-size:12px; color:inherit; opacity:0.8;">Tính từ Thứ 2 đến Chủ nhật của tuần hiện tại</p>
+                    <div id="fin-week-view" class="fin-sub-section">
+                        <div style="display:flex; gap:16px; width:100%; flex-wrap:wrap;">
+                            <!-- CỘT TRÁI: Tổng chi phí linh hoạt -->
+                            <div style="flex:0 0 220px; display:flex; flex-direction:column; gap:12px;">
+                                <div class="fin-stat-box" id="week-stat-box" style="flex:none;">
+                                    <h4 style="margin:0 0 8px 0; color:inherit; font-size:14px;">🛍️ Chi phí linh hoạt tuần này</h4>
+                                    <div class="fin-stat-num" id="week-flex-total" style="color:inherit; font-size:28px;">0đ</div>
+                                    <p style="margin:8px 0 0 0; font-size:11px; color:inherit; opacity:0.7;">Thứ 2 → Chủ nhật tuần này</p>
+                                </div>
+                                <div id="week-budget-bar" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px;"></div>
+                            </div>
+                            <!-- CỘT PHẢI: Danh sách theo nhóm -->
+                            <div style="flex:1; min-width:180px; overflow-y:auto; max-height:360px;">
+                                <h4 style="margin:0 0 12px 0; color:#334155; font-size:13px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">📋 Chi tiết theo nhóm</h4>
+                                <div id="week-flex-breakdown"></div>
+                            </div>
                         </div>
                     </div>
                     <div id="fin-month-view" class="fin-sub-section"><h4 style="margin:0 0 15px 0; color:#334155;">Tình hình ngân sách tháng hiện tại</h4><div id="month-progress-container"></div></div>
@@ -958,7 +969,45 @@
         let timeRemaining = 25 * 60, isWorking = true, timerInterval = null, activeTaskIndex = null; 
         function updateMiniTimerDisplay() { let mins = Math.floor(timeRemaining / 60), secs = timeRemaining % 60; document.getElementById('mini-clock').innerText = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs; }
         function handleTomatoClick(taskIndex, btnElement) { if (activeTaskIndex === taskIndex) { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; btnElement.classList.remove('running'); document.getElementById('mini-status').innerText = "⏸️ Tạm dừng"; } else { btnElement.classList.add('running'); startCountdown(taskIndex); } return; } if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } document.querySelectorAll('.row-pomo-btn').forEach(b => b.classList.remove('running')); document.querySelectorAll('.task-row').forEach(r => r.classList.remove('focusing')); activeTaskIndex = taskIndex; isWorking = true; timeRemaining = 25 * 60; document.getElementById(`daily-row-${taskIndex}`).classList.add('focusing'); btnElement.classList.add('running'); startCountdown(taskIndex); }
-        function startCountdown(taskIndex) { const statusText = document.getElementById('mini-status'); const taskName = document.getElementById(`daily-task-${taskIndex}`).value.trim() || `Task ${taskIndex}`; statusText.innerText = isWorking ? `🎯 Làm: ${taskName}` : "⏳ Nghỉ (5p)"; updateMiniTimerDisplay(); timerInterval = setInterval(() => { timeRemaining--; updateMiniTimerDisplay(); if (timeRemaining <= 0) { clearInterval(timerInterval); timerInterval = null; const currentBtn = document.querySelector(`#daily-row-${taskIndex} .row-pomo-btn`); if (isWorking) { const rowBoxes = document.querySelectorAll(`#daily-row-${taskIndex} .pomo-box`); for (let box of rowBoxes) { if (!box.checked) { box.checked = true; saveDailyData(); break; } } isWorking = false; timeRemaining = 5 * 60; statusText.innerText = "⏳ Nghỉ (5p)"; updateMiniTimerDisplay(); alert(`🎉 Hết 25p! Đã tích 1 phiên cho: ${taskName}. Nghỉ 5 phút nhé.`); startCountdown(taskIndex); } else { isWorking = true; timeRemaining = 25 * 60; if (currentBtn) currentBtn.classList.remove('running'); statusText.innerText = "⏸️ Hết giờ nghỉ"; updateMiniTimerDisplay(); alert("Hết 5 phút nghỉ! Sẵn sàng quay lại công việc chưa?"); } } }, 1000); }
+        function startCountdown(taskIndex) { 
+            const statusText = document.getElementById('mini-status'); 
+            const taskName = document.getElementById(`daily-task-${taskIndex}`).value.trim() || `Task ${taskIndex}`; 
+            statusText.innerText = isWorking ? `🎯 Làm: ${taskName}` : "⏳ Nghỉ (5p)"; 
+            updateMiniTimerDisplay();
+
+            // Lưu thời điểm bắt đầu và thời gian còn lại lúc bắt đầu để tính chính xác dù tab bị ẩn
+            const startedAt = Date.now();
+            const startingRemaining = timeRemaining;
+
+            timerInterval = setInterval(() => { 
+                const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+                timeRemaining = Math.max(0, startingRemaining - elapsed);
+                updateMiniTimerDisplay(); 
+
+                if (timeRemaining <= 0) { 
+                    clearInterval(timerInterval); 
+                    timerInterval = null; 
+                    const currentBtn = document.querySelector(`#daily-row-${taskIndex} .row-pomo-btn`); 
+                    if (isWorking) { 
+                        const rowBoxes = document.querySelectorAll(`#daily-row-${taskIndex} .pomo-box`); 
+                        for (let box of rowBoxes) { if (!box.checked) { box.checked = true; saveDailyData(); break; } } 
+                        isWorking = false; 
+                        timeRemaining = 5 * 60; 
+                        statusText.innerText = "⏳ Nghỉ (5p)"; 
+                        updateMiniTimerDisplay(); 
+                        alert(`🎉 Hết 25p! Đã tích 1 phiên cho: ${taskName}. Nghỉ 5 phút nhé.`); 
+                        startCountdown(taskIndex); 
+                    } else { 
+                        isWorking = true; 
+                        timeRemaining = 25 * 60; 
+                        if (currentBtn) currentBtn.classList.remove('running'); 
+                        statusText.innerText = "⏸️ Hết giờ nghỉ"; 
+                        updateMiniTimerDisplay(); 
+                        alert("Hết 5 phút nghỉ! Sẵn sàng quay lại công việc chưa?"); 
+                    } 
+                } 
+            }, 500); // tick 500ms để phản ứng nhanh hơn khi quay lại tab
+        }
 
         // ==========================================
         // FINANCE MODULE
@@ -996,6 +1045,7 @@
             
             let weekFlexSum = 0, monthSavingsSum = 0, monthFixedSum = 0, monthFlexSum = 0;
             let subCatData = {}; Object.keys(categoryMap).forEach(key => subCatData[key] = 0);
+            let weekFlexByGroup = {}; // { subCat: [{ note, amount }] }
             
             let dailyHtml = `<h4 style="margin:0 0 15px 0; color:#334155;">Khoản chi hôm nay (${String(today.getDate()).padStart(2, '0')}/${String(currentMonth + 1).padStart(2, '0')})</h4><div style="overflow-y:auto; max-height:350px; padding-right:5px;">`;
             let dailyTotal = 0; let hasDaily = false;
@@ -1014,7 +1064,11 @@
                     if (parts.length === 3) {
                         const txYear = parseInt(parts[0], 10); const txMonth = parseInt(parts[1], 10) - 1; const txDateObj = new Date(txYear, txMonth, parseInt(parts[2], 10));
                         const currentMainCat = categoryMap[tx.subCat] || tx.mainCat;
-                        if(txDateObj >= monday && txDateObj <= sunday && currentMainCat === "Chi phí linh hoạt") { weekFlexSum += tx.amount; } 
+                        if(txDateObj >= monday && txDateObj <= sunday && currentMainCat === "Chi phí linh hoạt") { 
+                            weekFlexSum += tx.amount;
+                            if(!weekFlexByGroup[tx.subCat]) weekFlexByGroup[tx.subCat] = [];
+                            weekFlexByGroup[tx.subCat].push({ note: tx.note, amount: tx.amount });
+                        }
                         if(txYear === currentYear && txMonth === currentMonth) { 
                             if(currentMainCat === "Tiết kiệm/ đầu tư") monthSavingsSum += tx.amount; 
                             if(currentMainCat === "Chi phí cố định") monthFixedSum += tx.amount; 
@@ -1031,10 +1085,44 @@
             document.getElementById('fin-day-view').innerHTML = dailyHtml;
 
             document.getElementById('week-flex-total').innerText = formatMoney(weekFlexSum);
+            const weekBudget = budgets.flexible || 6000000;
             const weekStatBox = document.getElementById('week-stat-box');
-            if (weekFlexSum > 900000) { weekStatBox.style.backgroundColor = '#fee2e2'; weekStatBox.style.borderColor = '#fca5a5'; weekStatBox.style.color = '#991b1b'; } 
-            else if (weekFlexSum > 500000) { weekStatBox.style.backgroundColor = '#fef9c3'; weekStatBox.style.borderColor = '#fde047'; weekStatBox.style.color = '#854d0e'; } 
+            if (weekFlexSum > weekBudget) { weekStatBox.style.backgroundColor = '#fee2e2'; weekStatBox.style.borderColor = '#fca5a5'; weekStatBox.style.color = '#991b1b'; } 
+            else if (weekFlexSum > weekBudget * 0.75) { weekStatBox.style.backgroundColor = '#fef9c3'; weekStatBox.style.borderColor = '#fde047'; weekStatBox.style.color = '#854d0e'; } 
             else { weekStatBox.style.backgroundColor = '#f8fafc'; weekStatBox.style.borderColor = '#cbd5e1'; weekStatBox.style.color = 'inherit'; }
+
+            // Progress bar so với ngân sách linh hoạt
+            const weekPct = weekBudget > 0 ? Math.min((weekFlexSum / weekBudget) * 100, 100) : 0;
+            const barColor = weekFlexSum > weekBudget ? '#f87171' : weekFlexSum > weekBudget * 0.75 ? '#fbbf24' : '#4ade80';
+            document.getElementById('week-budget-bar').innerHTML = `
+                <div style="font-size:12px; color:#64748b; margin-bottom:6px;">So với ngân sách linh hoạt tháng</div>
+                <div style="font-size:13px; font-weight:bold; color:#1e293b; margin-bottom:8px;">${formatMoney(weekFlexSum)} / ${formatMoney(weekBudget)}</div>
+                <div class="progress-track"><div class="progress-fill" style="width:${weekPct.toFixed(1)}%; background:${barColor};"></div></div>
+                <div style="font-size:11px; color:#94a3b8; margin-top:6px;">${weekPct.toFixed(1)}% ngân sách đã dùng</div>`;
+
+            // Cột phải: danh sách theo nhóm danh mục
+            let breakdownHtml = '';
+            const groups = Object.entries(weekFlexByGroup).sort((a,b) => b[1].reduce((s,t)=>s+t.amount,0) - a[1].reduce((s,t)=>s+t.amount,0));
+            if (groups.length === 0) {
+                breakdownHtml = '<div style="color:#94a3b8; font-size:13px; font-style:italic; text-align:center; padding:20px 0;">Chưa có chi tiêu linh hoạt nào trong tuần này.</div>';
+            } else {
+                groups.forEach(([subCat, items]) => {
+                    const groupTotal = items.reduce((s, t) => s + t.amount, 0);
+                    breakdownHtml += `<div style="margin-bottom:14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <span style="font-size:13px; font-weight:bold; color:#334155;">${subCat}</span>
+                            <span style="font-size:13px; font-weight:bold; color:#e11d48;">-${formatMoney(groupTotal)}</span>
+                        </div>`;
+                    items.forEach(tx => {
+                        breakdownHtml += `<div style="display:flex; justify-content:space-between; padding:5px 8px; background:#f8fafc; border-radius:6px; margin-bottom:4px; font-size:12px; border-left:3px solid #e2e8f0;">
+                            <span style="color:#64748b;">${tx.note || '(Không ghi chú)'}</span>
+                            <span style="color:#1e293b; font-weight:600;">-${formatMoney(tx.amount)}</span>
+                        </div>`;
+                    });
+                    breakdownHtml += `</div>`;
+                });
+            }
+            document.getElementById('week-flex-breakdown').innerHTML = breakdownHtml;
             
             const progressContainer = document.getElementById('month-progress-container'); 
             const items = [ { name: "📈 Tiết kiệm / Đầu tư", actual: monthSavingsSum, budget: budgets.savings }, { name: "🏠 Chi phí cố định", actual: monthFixedSum, budget: budgets.fixed }, { name: "🛍️ Chi phí linh hoạt", actual: monthFlexSum, budget: budgets.flexible } ];
