@@ -303,13 +303,18 @@
             </div>
             <div style="margin-bottom:24px;">
                 <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:12px;">Màu sắc</label>
-                <div id="habit-edit-colors" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;"></div>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <label style="font-size:12px; color:#64748b; white-space:nowrap;">Màu tuỳ chỉnh:</label>
-                    <input type="color" id="habit-edit-custompicker" value="#94a3b8"
-                        style="width:40px; height:36px; border:1.5px solid #e2e8f0; border-radius:8px; padding:2px; cursor:pointer; background:none;"
-                        oninput="document.querySelectorAll('.habit-edit-color-swatch').forEach(s=>s.style.borderColor='transparent'); this.style.borderColor='var(--primary)';">
-                    <span style="font-size:12px; color:#94a3b8;">← Chọn màu bất kỳ</span>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <div id="habit-edit-colors" style="display:contents;"></div>
+                    <div style="position:relative; width:34px; height:34px; flex-shrink:0;" title="Chọn màu tuỳ chỉnh">
+                        <input type="color" id="habit-edit-custompicker" value="#94a3b8"
+                            style="position:absolute; opacity:0; width:34px; height:34px; cursor:pointer; top:0; left:0; border:none; padding:0;"
+                            oninput="document.querySelectorAll('.habit-edit-color-swatch').forEach(s=>s.style.borderColor='transparent'); document.getElementById('habit-picker-circle').style.background=this.value;">
+                        <div id="habit-picker-circle" style="width:34px; height:34px; border-radius:50%; background:#e2e8f0; border:3px solid transparent; display:flex; align-items:center; justify-content:center; pointer-events:none; box-shadow:0 1px 3px rgba(0,0,0,0.15);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#64748b;">
+                                <path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41-6.6 6.6A2 2 0 0 0 5 16v3h3a2 2 0 0 0 1.42-.59l6.6-6.6 1.41 1.42 1.42-1.42-1.42-1.41 3.12-3.12a1 1 0 0 0 0-1.65zM8 17H7v-1l6.59-6.59 1 1z"/>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div style="display:flex; gap:10px;">
@@ -658,13 +663,22 @@
             renderHabitCircles(wData.habits);
         }
 
+        let isNewHabit = false;
+
         function addHabit() {
-            const wData = cloudState[getWeeklyKey()] || {habits:[]};
-            wData.habits.push({text: '', color: '#94a3b8', days: [false,false,false,false,false,false,false]});
-            pushToCloud(getWeeklyKey(), wData);
-            renderHabits();
-            // Mở ngay modal edit cho habit mới
-            openHabitEdit(wData.habits.length - 1);
+            isNewHabit = true;
+            editingHabitIndex = -1; // sentinel: chưa có trong array
+            document.getElementById('habit-edit-text').value = '';
+            document.getElementById('habit-edit-custompicker').value = '#94a3b8';
+
+            let swatchHtml = '';
+            HABIT_COLORS.forEach(c => {
+                const isSelected = c.hex === '#94a3b8';
+                swatchHtml += `<div class="habit-edit-color-swatch" style="background:${c.hex}; border-color:${isSelected ? '#1e293b' : 'transparent'};" onclick="selectEditColor('${c.hex}')"></div>`;
+            });
+            document.getElementById('habit-edit-colors').innerHTML = swatchHtml;
+            document.getElementById('habit-edit-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('habit-edit-text').focus(), 100);
         }
 
         function deleteHabit(index) {
@@ -730,6 +744,7 @@
             const h = wData.habits[index] || {text:'', color:'#94a3b8'};
             document.getElementById('habit-edit-text').value = h.text;
             document.getElementById('habit-edit-custompicker').value = h.color || '#94a3b8';
+            document.getElementById('habit-picker-circle').style.background = '#e2e8f0';
 
             let swatchHtml = '';
             HABIT_COLORS.forEach(c => {
@@ -750,18 +765,24 @@
 
         function saveHabitEdit() {
             const wData = cloudState[getWeeklyKey()] || {habits:[]};
-            // Ưu tiên swatch được chọn, nếu không lấy color picker
             const selectedSwatch = [...document.querySelectorAll('.habit-edit-color-swatch')].find(s => s.style.borderColor === 'rgb(30, 41, 59)');
             const pickerColor = document.getElementById('habit-edit-custompicker').value;
             const newColor = selectedSwatch ? selectedSwatch.style.background : pickerColor;
-            wData.habits[editingHabitIndex].text = document.getElementById('habit-edit-text').value;
-            wData.habits[editingHabitIndex].color = newColor;
+            const newText = document.getElementById('habit-edit-text').value;
+
+            if (isNewHabit) {
+                wData.habits.push({ text: newText, color: newColor, days: [false,false,false,false,false,false,false] });
+            } else {
+                wData.habits[editingHabitIndex].text = newText;
+                wData.habits[editingHabitIndex].color = newColor;
+            }
             pushToCloud(getWeeklyKey(), wData);
+            isNewHabit = false;
             closeHabitEdit();
             renderHabits();
         }
 
-        function closeHabitEdit() { document.getElementById('habit-edit-modal').style.display = 'none'; editingHabitIndex = null; }
+        function closeHabitEdit() { document.getElementById('habit-edit-modal').style.display = 'none'; editingHabitIndex = null; isNewHabit = false; }
 
         function changeHabitColor(index, color) { saveWeeklyLocalOnly(); cloudState[getWeeklyKey()].habits[index].color = color; pushToCloud(getWeeklyKey(), cloudState[getWeeklyKey()]); renderHabits(); }
 
