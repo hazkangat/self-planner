@@ -533,13 +533,42 @@
         let cloudState = {}; 
         let syncTimers = {};
 
+        // So sánh 2 phiên bản dữ liệu cùng key, ưu tiên bản có nhiều nội dung thực hơn (tránh bản rỗng ghi đè bản có dữ liệu)
+        function contentScore(obj) {
+            try {
+                const s = JSON.stringify(obj);
+                // Đếm số ký tự "có nghĩa": bỏ dấu ngoặc, false, "", 0, rỗng
+                let score = 0;
+                if (obj && typeof obj === 'object') {
+                    const walk = (v) => {
+                        if (v === null || v === undefined) return;
+                        if (typeof v === 'string') { if (v.trim()) score += v.trim().length; }
+                        else if (typeof v === 'number') { if (v) score += 1; }
+                        else if (typeof v === 'boolean') { if (v) score += 1; }
+                        else if (Array.isArray(v)) v.forEach(walk);
+                        else if (typeof v === 'object') Object.values(v).forEach(walk);
+                    };
+                    walk(obj);
+                }
+                return score;
+            } catch(e) { return 0; }
+        }
+        function mergePreferNonEmpty(cloudVal, localVal) {
+            // Bản nào nhiều nội dung hơn thì giữ; nếu bằng nhau ưu tiên local (bản người dùng vừa nhập trên máy)
+            const cScore = contentScore(cloudVal);
+            const lScore = contentScore(localVal);
+            return lScore >= cScore ? localVal : cloudVal;
+        }
+
         async function initCloudApp() {
+            let cloudLoaded = false;
             try {
                 const res = await fetch(CLOUD_WEBHOOK_URL);
                 const textData = await res.text();
                 
                 try {
                     cloudState = JSON.parse(textData);
+                    cloudLoaded = true;
                     document.getElementById('cloud-badge-text').innerText = "Đã đồng bộ";
                     document.getElementById('cloud-badge-icon').innerText = "🟢";
                 } catch (parseErr) {
@@ -552,6 +581,22 @@
                 document.getElementById('cloud-badge-icon').innerText = "🔴";
                 cloudState = JSON.parse(localStorage.getItem('offline_backup')) || {};
             }
+
+            // Hợp nhất dữ liệu: localStorage là bản người dùng nhập gần nhất trên máy này → ưu tiên nó
+            try {
+                const localBackup = JSON.parse(localStorage.getItem('offline_backup')) || {};
+                for (let key in localBackup) {
+                    // Nếu cloud không có key, HOẶC bản local có nội dung (khác rỗng) → dùng bản local
+                    const localVal = localBackup[key];
+                    const cloudHasKey = key in cloudState;
+                    if (!cloudHasKey) {
+                        cloudState[key] = localVal;
+                    } else if (cloudLoaded) {
+                        // Cả hai đều có: ưu tiên local nếu local "đầy đủ hơn" hoặc mới hơn
+                        cloudState[key] = mergePreferNonEmpty(cloudState[key], localVal);
+                    }
+                }
+            } catch(mergeErr) { console.warn("Không merge được backup cục bộ:", mergeErr); }
             
             const safe = (label, fn) => { try { fn(); } catch(e) { console.error("Lỗi " + label + ":", e); } };
             safe('updateYearProgress', updateYearProgress);
@@ -571,6 +616,11 @@
         function pushToCloud(key, data) {
             cloudState[key] = data;
             localStorage.setItem('offline_backup', JSON.stringify(cloudState)); 
+            // Đánh dấu key này là "dirty" (chưa đồng bộ lên cloud)
+            let meta = {};
+            try { meta = JSON.parse(localStorage.getItem('offline_meta')) || {}; } catch(e) {}
+            meta[key] = 'dirty';
+            localStorage.setItem('offline_meta', JSON.stringify(meta));
             
             document.getElementById('cloud-badge-text').innerText = "Đang lưu...";
             document.getElementById('cloud-badge-icon').innerText = "⏳";
@@ -578,16 +628,34 @@
             clearTimeout(syncTimers[key]);
             syncTimers[key] = setTimeout(async () => {
                 try {
-                    await fetch(CLOUD_WEBHOOK_URL, {
+                    const resp = await fetch(CLOUD_WEBHOOK_URL, {
                         method: "POST",
                         body: JSON.stringify({ action: "saveState", key: key, data: data }),
                         headers: { "Content-Type": "text/plain;charset=utf-8" }
                     });
-                    document.getElementById('cloud-badge-text').innerText = "Đã đồng bộ";
-                    document.getElementById('cloud-badge-icon').innerText = "🟢";
+                    // Đọc phản hồi thật từ server để xác nhận lưu thành công
+                    let ok = resp.ok;
+                    try {
+                        const respText = await resp.text();
+                        // Apps Script thường trả JSON {status:"success"} hoặc chữ "success"
+                        if (respText && /error|fail|exception/i.test(respText) && !/success/i.test(respText)) ok = false;
+                    } catch(readErr) { /* không đọc được vẫn coi như dựa vào resp.ok */ }
+
+                    if (ok) {
+                        let meta2 = {};
+                        try { meta2 = JSON.parse(localStorage.getItem('offline_meta')) || {}; } catch(e) {}
+                        delete meta2[key];
+                        localStorage.setItem('offline_meta', JSON.stringify(meta2));
+                        document.getElementById('cloud-badge-text').innerText = "Đã đồng bộ";
+                        document.getElementById('cloud-badge-icon').innerText = "🟢";
+                    } else {
+                        // Server báo lỗi → giữ dirty, dữ liệu vẫn an toàn trong localStorage
+                        document.getElementById('cloud-badge-text').innerText = "Lưu cục bộ (cloud lỗi)";
+                        document.getElementById('cloud-badge-icon').innerText = "🟡";
+                    }
                 } catch(e) {
-                    document.getElementById('cloud-badge-text').innerText = "Lỗi lưu (Offline)";
-                    document.getElementById('cloud-badge-icon').innerText = "🔴";
+                    document.getElementById('cloud-badge-text').innerText = "Lưu cục bộ (Offline)";
+                    document.getElementById('cloud-badge-icon').innerText = "🟡";
                 }
             }, 1500);
         }
@@ -1269,6 +1337,21 @@
                 } 
             }); 
         }
+
+        // Trước khi rời trang: gửi ngay các key còn "dirty" để không mất dữ liệu trong khoảng debounce
+        window.addEventListener('beforeunload', function() {
+            try {
+                const meta = JSON.parse(localStorage.getItem('offline_meta')) || {};
+                for (let key in meta) {
+                    if (meta[key] === 'dirty' && cloudState[key] !== undefined) {
+                        const payload = JSON.stringify({ action: "saveState", key: key, data: cloudState[key] });
+                        if (navigator.sendBeacon) {
+                            navigator.sendBeacon(CLOUD_WEBHOOK_URL, new Blob([payload], { type: 'text/plain;charset=utf-8' }));
+                        }
+                    }
+                }
+            } catch(e) {}
+        });
 
         window.onload = initCloudApp;
     </script>
