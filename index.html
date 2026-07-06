@@ -88,7 +88,7 @@
         /* WEEKLY PLANNER CSS */
         .weekly-header { display: flex; justify-content: center; align-items: center; padding-bottom: 0; margin-bottom: 20px; border-bottom: none; }
         .weekly-date-range { font-size: 18px; font-weight: bold; color: var(--primary); background: #eff6ff; padding: 8px 16px; border-radius: 8px; width: 100%; text-align: center; }
-        .matrix-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; min-width: 0; }
+        .matrix-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; min-width: 0; }
         .matrix-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
         .matrix-box h4 { margin-top: 0; margin-bottom: 15px; font-size: 15px; border-bottom: 2px solid; padding-bottom: 8px; display: inline-block; }
         .matrix-box.q1 { background: #fff0f2; border-color: #ffe4e6; } .matrix-box.q1 h4 { color: #e11d48; border-color: #e11d48; }
@@ -553,23 +553,17 @@
                 cloudState = JSON.parse(localStorage.getItem('offline_backup')) || {};
             }
             
-            try {
-                updateYearProgress(); 
-                renderYearlyGoals(); 
-                setupWeeklyDates(); 
-                renderMatrix(); 
-                renderHabits();
-                renderMonthlyGoals(); 
-                renderCalendar(); 
-                renderDailyTasksDOM(); 
-                
-                currentDailyDate = new Date(); 
-                updateDailyHeader(); 
-                
-                loadFinanceData();
-            } catch (renderError) {
-                console.error("Lỗi vẽ giao diện:", renderError);
-            }
+            const safe = (label, fn) => { try { fn(); } catch(e) { console.error("Lỗi " + label + ":", e); } };
+            safe('updateYearProgress', updateYearProgress);
+            safe('renderYearlyGoals', renderYearlyGoals);
+            safe('setupWeeklyDates', setupWeeklyDates);
+            safe('renderMatrix', renderMatrix);
+            safe('renderHabits', renderHabits);
+            safe('renderMonthlyGoals', renderMonthlyGoals);
+            safe('renderCalendar', renderCalendar);
+            safe('renderDailyTasksDOM', renderDailyTasksDOM);
+            safe('updateDailyHeader', () => { currentDailyDate = new Date(); updateDailyHeader(); });
+            safe('loadFinanceData', loadFinanceData);
 
             document.getElementById('app-loader').style.display = 'none';
         }
@@ -612,6 +606,49 @@
             return `weekly_${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
         }
 
+        // Đảm bảo tuần hiện tại đã có dữ liệu; nếu là tuần mới thì kế thừa danh sách habit (tên + màu) từ tuần gần nhất, chỉ reset các ô check
+        function ensureWeeklyInit() {
+            try {
+                const wKey = getWeeklyKey();
+                if (cloudState[wKey] && cloudState[wKey].habits && cloudState[wKey].habits.length > 0) return;
+
+                // Parse ngày của tuần hiện tại
+                const wParts = (wKey.split('_')[1] || '').split('-');
+                if (wParts.length !== 3) return;
+                const wDateObj = new Date(parseInt(wParts[0]), parseInt(wParts[1]) - 1, parseInt(wParts[2]));
+
+                // Tìm tuần gần nhất TRƯỚC tuần hiện tại có habits
+                let latestKey = null, latestDate = null;
+                for (let key in cloudState) {
+                    if (!key.startsWith('weekly_') || key === wKey) continue;
+                    const data = cloudState[key];
+                    if (!data || !Array.isArray(data.habits) || data.habits.length === 0) continue;
+                    const parts = (key.split('_')[1] || '').split('-');
+                    if (parts.length !== 3) continue;
+                    const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    if (isNaN(d.getTime())) continue;
+                    if (d >= wDateObj) continue; // chỉ lấy tuần trước
+                    if (!latestDate || d > latestDate) { latestDate = d; latestKey = key; }
+                }
+
+                const existing = cloudState[wKey] || {};
+                let inheritedHabits = [];
+                if (latestKey) {
+                    inheritedHabits = cloudState[latestKey].habits.map(h => ({
+                        text: h.text || '',
+                        color: h.color || '#94a3b8',
+                        days: [false, false, false, false, false, false, false]
+                    }));
+                }
+                cloudState[wKey] = {
+                    matrix: existing.matrix || {},
+                    habits: (Array.isArray(existing.habits) && existing.habits.length > 0) ? existing.habits : inheritedHabits
+                };
+            } catch (e) {
+                console.error("ensureWeeklyInit lỗi:", e);
+            }
+        }
+
         function setupWeeklyDates() { 
             const today = new Date(); const dayOfWeek = today.getDay(); const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; const monday = new Date(today); monday.setDate(today.getDate() + distanceToMonday); const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); 
             const formatDate = (date) => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`; 
@@ -621,7 +658,21 @@
         function renderMatrix() { 
             const matrixData = [ { id: 'q1', title: '🔥 Quan trọng & Khẩn cấp' }, { id: 'q3', title: '⚡ Khẩn cấp, Ko quan trọng' }, { id: 'q2', title: '🌱 Quan trọng, Ko khẩn cấp' }, { id: 'q4', title: '☕ Ko quan trọng, Ko khẩn cấp' } ]; 
             const wData = cloudState[getWeeklyKey()] || { matrix: {}, habits: [] };
-            matrixData.forEach(box => { let html = `<h4>${box.title}</h4>`; const qArr = wData.matrix[box.id] || []; for(let i = 1; i <= 5; i++) { const rowId = `matrix-${box.id}-row-${i}`; const item = qArr[i-1] || {done: false, text: ""}; const checked = item.done ? "checked" : ""; const completed = item.done ? "completed" : ""; html += `<div class="task-row ${completed}" id="${rowId}"><input type="checkbox" class="task-done-box" id="${rowId}-done" onchange="toggleTaskDone('${rowId}', this); saveWeekly();" ${checked}><input type="text" class="task-input" id="${rowId}-text" placeholder="Nhập mục ${i}..." value="${item.text.replace(/"/g, '&quot;')}" oninput="saveWeekly()"></div>`; } document.getElementById(`matrix-${box.id}`).innerHTML = html; }); 
+            if(!wData.matrix) wData.matrix = {};
+            matrixData.forEach(box => { 
+                let html = `<h4>${box.title}</h4>`; 
+                const qArr = wData.matrix[box.id] || []; 
+                for(let i = 1; i <= 5; i++) { 
+                    const rowId = `matrix-${box.id}-row-${i}`; 
+                    const item = qArr[i-1] || {done: false, text: ""}; 
+                    const itemText = (item.text || "").replace(/"/g, '&quot;');
+                    const checked = item.done ? "checked" : ""; 
+                    const completed = item.done ? "completed" : ""; 
+                    html += `<div class="task-row ${completed}" id="${rowId}"><input type="checkbox" class="task-done-box" id="${rowId}-done" onchange="toggleTaskDone('${rowId}', this); saveWeekly();" ${checked}><input type="text" class="task-input" id="${rowId}-text" placeholder="Nhập mục ${i}..." value="${itemText}" oninput="saveWeekly()"></div>`; 
+                } 
+                const el = document.getElementById(`matrix-${box.id}`);
+                if(el) el.innerHTML = html; 
+            }); 
         }
 
         // BẢNG MÀU CHỌN SẴN
@@ -637,6 +688,7 @@
         ];
 
         function renderHabits() {
+            ensureWeeklyInit();
             const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
             const wData = cloudState[getWeeklyKey()] || { matrix: {}, habits: [] };
             if(!wData.habits) wData.habits = [];
@@ -701,17 +753,29 @@
         }
 
         let dragHabitIndex = null;
-        function dragStart(e, index) { dragHabitIndex = index; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => e.target.classList.add('dragging'), 0); }
-        function dragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+        function dragStart(e, index) { 
+            dragHabitIndex = index; 
+            e.dataTransfer.effectAllowed = 'move'; 
+            e.dataTransfer.setData('text/plain', String(index)); // Firefox cần dữ liệu để bắt đầu drag
+            const row = e.currentTarget;
+            setTimeout(() => row.classList.add('dragging'), 0); 
+        }
+        function dragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
         function drop(e, dropIndex) {
             e.preventDefault();
+            e.stopPropagation();
             document.querySelectorAll('.habit-drag-item').forEach(c => c.classList.remove('dragging'));
-            if (dragHabitIndex === null || dragHabitIndex === dropIndex) return;
+            let fromIndex = dragHabitIndex;
+            if (fromIndex === null) { const dt = e.dataTransfer.getData('text/plain'); if(dt !== '') fromIndex = parseInt(dt); }
+            if (fromIndex === null || isNaN(fromIndex) || fromIndex === dropIndex) { dragHabitIndex = null; return; }
+            // Lưu trạng thái checkbox hiện tại vào mảng TRƯỚC khi hoán đổi
             saveWeeklyLocalOnly(); 
             const wData = cloudState[getWeeklyKey()];
-            const draggedItem = wData.habits.splice(dragHabitIndex, 1)[0];
+            if(!wData || !Array.isArray(wData.habits)) { dragHabitIndex = null; return; }
+            const draggedItem = wData.habits.splice(fromIndex, 1)[0];
             wData.habits.splice(dropIndex, 0, draggedItem);
             pushToCloud(getWeeklyKey(), wData);
+            dragHabitIndex = null;
             renderHabits();
         }
 
@@ -800,17 +864,27 @@
         function saveWeeklyLocalOnly() {
             const wKey = getWeeklyKey();
             const data = cloudState[wKey] || { matrix: {}, habits: [] };
-            ['q1', 'q2', 'q3', 'q4'].forEach(q => { data.matrix[q] = []; for(let i=1; i<=5; i++) { data.matrix[q].push({ done: document.getElementById(`matrix-${q}-row-${i}-done`).checked, text: document.getElementById(`matrix-${q}-row-${i}-text`).value }); } });
-            // Habits: chỉ cập nhật trạng thái checkbox, tên/màu được lưu từ modal edit
-            if(!data.habits) data.habits = [];
-            while(data.habits.length < 5) data.habits.push({text:'', color:'#94a3b8', days:[false,false,false,false,false,false,false]});
-            for(let i=0; i<5; i++) {
+            if(!data.matrix) data.matrix = {};
+            ['q1', 'q2', 'q3', 'q4'].forEach(q => {
+                data.matrix[q] = [];
+                for(let i=1; i<=5; i++) {
+                    const doneEl = document.getElementById(`matrix-${q}-row-${i}-done`);
+                    const textEl = document.getElementById(`matrix-${q}-row-${i}-text`);
+                    if(!doneEl || !textEl) { data.matrix[q].push({ done: false, text: "" }); continue; }
+                    data.matrix[q].push({ done: doneEl.checked, text: textEl.value });
+                }
+            });
+            // Habits: cập nhật checkbox theo đúng số lượng habit hiện có (không ép về 5)
+            if(!Array.isArray(data.habits)) data.habits = [];
+            for(let i=0; i<data.habits.length; i++) {
                 if(!data.habits[i]) data.habits[i] = {text:'', color:'#94a3b8', days:[]};
-                data.habits[i].days = [];
+                const newDays = [];
                 for(let d=1; d<=7; d++) {
                     const el = document.getElementById(`habit-${i}-day-${d}`);
-                    data.habits[i].days.push(el ? el.checked : false);
+                    // Nếu checkbox tồn tại trong DOM thì lấy giá trị, nếu không giữ nguyên giá trị cũ
+                    newDays.push(el ? el.checked : (data.habits[i].days ? !!data.habits[i].days[d-1] : false));
                 }
+                data.habits[i].days = newDays;
             }
             cloudState[wKey] = data;
         }
