@@ -582,19 +582,29 @@
                 cloudState = JSON.parse(localStorage.getItem('offline_backup')) || {};
             }
 
-            // Hợp nhất dữ liệu: với MỖI key, giữ bản có nhiều nội dung thực hơn giữa cloud và local.
-            // Cách này đảm bảo: (a) dữ liệu vừa nhập trên máy này không bị bản cloud cũ/rỗng ghi đè;
-            // (b) khi cloud có bản mới hơn (từ máy khác) và local trống thì vẫn nhận được.
+            // Cloud là nguồn chân lý. localStorage CHỈ giữ lại thay đổi vừa mới sửa (trong 10 giây gần đây)
+            // mà có thể chưa kịp gửi lên cloud. Dirty "cũ" bị bỏ qua để tránh khoá cứng dữ liệu 1 máy.
             try {
                 const localBackup = JSON.parse(localStorage.getItem('offline_backup')) || {};
+                const localMeta = JSON.parse(localStorage.getItem('offline_meta')) || {};
+                const now = Date.now();
+                const FRESH_MS = 10000; // chỉ tin bản local nếu vừa sửa trong 10 giây
                 if (cloudLoaded) {
-                    for (let key in localBackup) {
-                        if (key in cloudState) {
-                            cloudState[key] = mergePreferNonEmpty(cloudState[key], localBackup[key]);
-                        } else {
+                    for (let key in localMeta) {
+                        const meta = localMeta[key];
+                        const isFreshDirty = meta && meta.state === 'dirty' && meta.ts && (now - meta.ts < FRESH_MS);
+                        if (isFreshDirty && key in localBackup) {
                             cloudState[key] = localBackup[key];
                         }
                     }
+                    // Backup lại = đúng bản đang dùng, và DỌN các dirty cũ đã hết hạn
+                    const cleanMeta = {};
+                    for (let key in localMeta) {
+                        const meta = localMeta[key];
+                        if (meta && meta.state === 'dirty' && meta.ts && (now - meta.ts < FRESH_MS)) cleanMeta[key] = meta;
+                    }
+                    localStorage.setItem('offline_meta', JSON.stringify(cleanMeta));
+                    localStorage.setItem('offline_backup', JSON.stringify(cloudState));
                 } else {
                     for (let key in localBackup) {
                         if (!(key in cloudState)) cloudState[key] = localBackup[key];
@@ -626,7 +636,7 @@
             // Đánh dấu key này là "dirty" (chưa đồng bộ lên cloud)
             let meta = {};
             try { meta = JSON.parse(localStorage.getItem('offline_meta')) || {}; } catch(e) {}
-            meta[key] = 'dirty';
+            meta[key] = { state: 'dirty', ts: Date.now() };
             localStorage.setItem('offline_meta', JSON.stringify(meta));
             
             document.getElementById('cloud-badge-text').innerText = "Đang lưu...";
@@ -644,9 +654,9 @@
                     let ok = resp.ok;
                     try {
                         const respText = await resp.text();
-                        // Apps Script thường trả JSON {status:"success"} hoặc chữ "success"
-                        if (respText && /error|fail|exception/i.test(respText) && !/success/i.test(respText)) ok = false;
-                    } catch(readErr) { /* không đọc được vẫn coi như dựa vào resp.ok */ }
+                        // Coi là LỖI nếu server báo lỗi rõ ràng (kể cả tiếng Việt), ngược lại tin resp.ok
+                        if (respText && /error|fail|exception|lỗi|thất bại/i.test(respText)) ok = false;
+                    } catch(readErr) { /* không đọc được vẫn dựa vào resp.ok */ }
 
                     if (ok) {
                         let meta2 = {};
@@ -1350,7 +1360,8 @@
             try {
                 const meta = JSON.parse(localStorage.getItem('offline_meta')) || {};
                 for (let key in meta) {
-                    if (meta[key] === 'dirty' && cloudState[key] !== undefined) {
+                    const m = meta[key];
+                    if (m && m.state === 'dirty' && cloudState[key] !== undefined) {
                         const payload = JSON.stringify({ action: "saveState", key: key, data: cloudState[key] });
                         if (navigator.sendBeacon) {
                             navigator.sendBeacon(CLOUD_WEBHOOK_URL, new Blob([payload], { type: 'text/plain;charset=utf-8' }));
