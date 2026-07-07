@@ -582,18 +582,23 @@
                 cloudState = JSON.parse(localStorage.getItem('offline_backup')) || {};
             }
 
-            // Hợp nhất dữ liệu: localStorage là bản người dùng nhập gần nhất trên máy này → ưu tiên nó
+            // Hợp nhất dữ liệu: CHỈ ưu tiên bản local cho các key CHƯA kịp đồng bộ lên cloud (còn 'dirty').
+            // Với các key đã đồng bộ, luôn tin tưởng cloud để nhiều thiết bị thấy dữ liệu giống nhau.
             try {
                 const localBackup = JSON.parse(localStorage.getItem('offline_backup')) || {};
-                for (let key in localBackup) {
-                    // Nếu cloud không có key, HOẶC bản local có nội dung (khác rỗng) → dùng bản local
-                    const localVal = localBackup[key];
-                    const cloudHasKey = key in cloudState;
-                    if (!cloudHasKey) {
-                        cloudState[key] = localVal;
-                    } else if (cloudLoaded) {
-                        // Cả hai đều có: ưu tiên local nếu local "đầy đủ hơn" hoặc mới hơn
-                        cloudState[key] = mergePreferNonEmpty(cloudState[key], localVal);
+                const localMeta = JSON.parse(localStorage.getItem('offline_meta')) || {};
+                if (cloudLoaded) {
+                    for (let key in localBackup) {
+                        if (localMeta[key] === 'dirty') {
+                            // Bản local chưa lên cloud → giữ lại, nhưng chỉ khi nó có nội dung thực (tránh bản rỗng đè bản cloud)
+                            cloudState[key] = mergePreferNonEmpty(cloudState[key], localBackup[key]);
+                        }
+                        // key không dirty → dùng nguyên bản cloud (đã gán ở trên), không đụng tới
+                    }
+                } else {
+                    // Không tải được cloud (offline) → dùng toàn bộ backup local
+                    for (let key in localBackup) {
+                        if (!(key in cloudState)) cloudState[key] = localBackup[key];
                     }
                 }
             } catch(mergeErr) { console.warn("Không merge được backup cục bộ:", mergeErr); }
@@ -1175,7 +1180,7 @@
         function formatMoney(num) { return Number(num).toLocaleString('vi-VN') + 'đ'; }
         function quickAddTx(amount, category, note) { const d = new Date(); const yyyy = d.getFullYear(); const mm = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0'); document.getElementById('fin-date').value = `${yyyy}-${mm}-${dd}`; document.getElementById('fin-amount').value = amount; document.getElementById('fin-category').value = category; document.getElementById('fin-note').value = note; addTransaction(); }
         function loadFinanceData() { const savedCats = cloudState['finance_categories']; if(savedCats && Object.keys(savedCats).length > 0) dynamicCategories = savedCats; else dynamicCategories = JSON.parse(JSON.stringify(defaultCategories)); updateCategoryMap(); renderCategorySelect(); renderCategorySettings(); const fData = cloudState['finance_state'] || {}; txs = Array.isArray(fData.txs) ? fData.txs : []; budgets = fData.budgets || { savings: 5000000, fixed: 4000000, flexible: 6000000 }; document.getElementById('b-savings').value = (budgets.savings || 5000000) / 1000; document.getElementById('b-fixed').value = (budgets.fixed || 4000000) / 1000; document.getElementById('b-flexible').value = (budgets.flexible || 6000000) / 1000; recalculateFinance(); }
-        async function addTransaction() { const date = document.getElementById('fin-date').value; const rawAmount = parseFloat(document.getElementById('fin-amount').value); const amount = rawAmount * 1000; const subCat = document.getElementById('fin-category').value; const note = document.getElementById('fin-note').value.trim(); if(!date || isNaN(amount) || amount <= 0) { alert("Vui lòng nhập đúng ngày và số tiền hợp lệ!"); return; } const mainCat = categoryMap[subCat] || "Khác"; const newTx = { date, amount, mainCat, subCat, note }; const btn = document.getElementById('btn-submit-tx'); const originalText = btn.innerText; btn.innerText = "⏳ Đang đồng bộ..."; btn.disabled = true; try { await fetch(CLOUD_WEBHOOK_URL, { method: "POST", body: JSON.stringify({ action: "addFinance", data: newTx }), headers: { 'Content-Type': 'text/plain;charset=utf-8' } }); if (!Array.isArray(txs)) txs = []; txs.push(newTx); pushToCloud('finance_state', { txs: txs, budgets: budgets }); document.getElementById('fin-amount').value = ""; document.getElementById('fin-note').value = ""; alert("🎉 Đã đồng bộ giao dịch!"); recalculateFinance(); } catch (error) { alert("❌ Lỗi đồng bộ: " + error.message); console.error(error); } finally { btn.innerText = originalText; btn.disabled = false; } }
+        async function addTransaction() { const date = document.getElementById('fin-date').value; const rawAmount = parseFloat(document.getElementById('fin-amount').value); const amount = rawAmount * 1000; const subCat = document.getElementById('fin-category').value; const note = document.getElementById('fin-note').value.trim(); if(!date || isNaN(amount) || amount <= 0) { alert("Vui lòng nhập đúng ngày và số tiền hợp lệ!"); return; } const mainCat = categoryMap[subCat] || "Khác"; const newTx = { date, amount, mainCat, subCat, note }; const btn = document.getElementById('btn-submit-tx'); const originalText = btn.innerText; btn.innerText = "⏳ Đang đồng bộ..."; btn.disabled = true; try { if (!Array.isArray(txs)) txs = []; txs.push(newTx); pushToCloud('finance_state', { txs: txs, budgets: budgets }); document.getElementById('fin-amount').value = ""; document.getElementById('fin-note').value = ""; alert("🎉 Đã thêm giao dịch!"); recalculateFinance(); } catch (error) { alert("❌ Lỗi: " + error.message); console.error(error); } finally { btn.innerText = originalText; btn.disabled = false; } }
         function saveBudgets() { budgets.savings = (parseFloat(document.getElementById('b-savings').value) || 0) * 1000; budgets.fixed = (parseFloat(document.getElementById('b-fixed').value) || 0) * 1000; budgets.flexible = (parseFloat(document.getElementById('b-flexible').value) || 0) * 1000; pushToCloud('finance_state', { txs: txs, budgets: budgets }); alert("⚙️ Đã cập nhật ngân sách!"); recalculateFinance(); }
         
         // HÀM TÍNH TOÁN BIỂU ĐỒ & XẾP HẠNG
