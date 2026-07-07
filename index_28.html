@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sổ Tay Tự Thân - Self Planner</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📔</text></svg>">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; --tab-height: 70px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; display: flex; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+        
+        #app-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; }
+        .spinner { border: 4px solid #f1f5f9; border-top: 4px solid var(--primary); border-radius: 50%; width: 45px; height: 45px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .cloud-badge { position: fixed; top: 15px; right: 15px; background: rgba(255,255,255,0.95); padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; color: #10b981; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 6px; backdrop-filter: blur(4px); }
+
+        .sidebar { width: 160px; background: white; border-right: 1px solid #e2e8f0; padding: 20px 8px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; z-index: 100; }
+        .sidebar h2 { font-size: 16px; padding: 0 8px; margin-bottom: 20px; color: var(--primary); white-space: nowrap; }
+        .menu-btn { padding: 10px 12px; border: none; background: none; text-align: left; font-size: 14px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+        .menu-btn:hover, .menu-btn.active { background: #eff6ff; color: var(--primary); font-weight: bold; }
+        
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; -webkit-overflow-scrolling: touch; box-sizing: border-box; }
+        .planner-section { display: none; background: white; padding: 24px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); animation: fadeIn 0.3s ease; }
+        .planner-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        input[type="checkbox"] { -webkit-appearance: none; appearance: none; background-color: white; border: 2px solid #cbd5e1; border-radius: 50%; cursor: pointer; transition: all 0.2s ease; display: inline-block; vertical-align: middle; }
+        input[type="checkbox"]:hover { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.2); }
+        input[type="checkbox"]:checked { background-color: #93c5fd; border-color: #93c5fd; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E"); background-size: 60%; background-position: center; background-repeat: no-repeat; }
+        .task-done-box { width: 22px; height: 22px; margin-right: 12px; flex-shrink: 0; }
+        .pomo-box { width: 20px; height: 20px; margin: 0; }
+        .habit-box { width: 28px; height: 28px; margin: 0; cursor: pointer; }
+
+        .daily-task-main { display: flex; align-items: center; flex: 1; gap: 8px; min-width: 0; }
+        .task-row { display: flex; align-items: center; margin-bottom: 12px; background: #f8fafc; padding: 8px 12px; border-radius: 8px; transition: 0.2s; }
+        .task-row.completed { background: #f1f5f9; opacity: 0.6; }
+        .task-row.completed .task-input { text-decoration: line-through; color: #94a3b8; }
+        .task-input { flex: 1; padding: 8px; border: none; background: transparent; font-size: 15px; outline: none; transition: 0.2s; }
+        .task-input:focus { color: var(--primary); }
+        .budget-labels { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; margin-bottom: 6px; }
+        .progress-track { width: 100%; height: 12px; background: #e2e8f0; border-radius: 6px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #93c5fd; width: 0%; transition: width 0.3s ease; }
+
+        /* YEARLY GOALS CSS */
+        .yearly-header { margin-bottom: 25px; } .yearly-header h2 { color: #1e293b; margin-top: 0; margin-bottom: 15px; font-size: 24px; }
+        .year-progress-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 25px; }
+        .word-of-year { display: flex; flex-direction: column; gap: 8px; margin-bottom: 30px; background: #fff0f2; padding: 15px 20px; border-radius: 12px; border: 1px dashed #fca5a5; }
+        .word-of-year label { font-size: 13px; font-weight: bold; color: #e11d48; letter-spacing: 0.5px; }
+        .woy-input { background: transparent; border: none; font-size: 24px; font-weight: bold; color: #be123c; outline: none; text-align: center; } .woy-input::placeholder { color: #fca5a5; font-weight: normal; }
+        .goal-matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
+        .goal-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .goal-card h4 { margin-top: 0; margin-bottom: 15px; font-size: 16px; padding-bottom: 10px; border-bottom: 2px solid; }
+        .goal-card.g-career h4 { color: #2563eb; border-color: #bfdbfe; } .goal-card.g-finance h4 { color: #16a34a; border-color: #bbf7d0; } .goal-card.g-health h4 { color: #e11d48; border-color: #fecdd3; } .goal-card.g-hobby h4 { color: #d97706; border-color: #fde68a; }
+        .goal-card .task-row { background: transparent; padding: 4px 0; margin-bottom: 8px; border-bottom: 1px dashed #f1f5f9; border-radius: 0; } .goal-card .task-input { font-size: 14px; padding: 4px; }
+
+        /* MONTHLY PLANNER CSS */
+        .monthly-goals { margin-bottom: 30px; } .monthly-goals h3 { color: var(--primary); font-size: 18px; margin-bottom: 15px; text-transform: uppercase; }
+        .calendar-container { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: white; }
+        .calendar-header-bar { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 15px 20px; border-bottom: 1px solid #e2e8f0; }
+        .calendar-header-bar h3 { margin: 0; font-size: 18px; color: #1e293b; }
+        .cal-nav-btn { background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; cursor: pointer; transition: 0.2s; font-weight: 500; }
+        .cal-nav-btn:hover { background: #eff6ff; border-color: var(--primary); color: var(--primary); }
+        .cal-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: white; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+        .fmt-btn { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 12px; cursor: pointer; color: #475569; font-size: 15px; font-weight: bold; transition: 0.2s; }
+        .fmt-btn:hover { background: #e2e8f0; color: var(--primary); }
+        .fmt-picker { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #64748b; font-weight: 500; }
+        .fmt-picker input[type="color"] { width: 26px; height: 26px; padding: 0; border: 1px solid #cbd5e1; cursor: pointer; border-radius: 4px; background: none; }
+        .calendar-grid-wrapper { width: 100%; box-sizing: border-box; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #e2e8f0; gap: 1px; width: 100%; }
+        .cal-day-name { background: #f1f5f9; text-align: center; padding: 10px 0; font-weight: bold; color: #64748b; font-size: 14px; }
+        .cal-cell { background: white; min-height: 120px; padding: 8px; display: flex; flex-direction: column; transition: 0.2s; box-sizing: border-box; overflow: hidden; }
+        .cal-cell:hover { background: #fafafa; } .cal-cell.empty { background: #f8fafc; } 
+        .cal-cell.today .cal-date-num { background: var(--primary); color: white; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; }
+        .cal-cell-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .cal-date-num { font-weight: bold; color: #475569; font-size: 14px; }
+        .cal-tools { display: flex; align-items: center; gap: 6px; }
+        .cal-icon-btn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 0; opacity: 0.3; transition: 0.2s; }
+        .cal-icon-btn:hover { opacity: 1; transform: scale(1.2); }
+        .cal-tag-btn { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #cbd5e1; background: transparent; cursor: pointer; transition: 0.2s; padding: 0; }
+        .cal-tag-btn.tag-red { background: #fca5a5; border-color: #fca5a5; } .cal-tag-btn.tag-green { background: #86efac; border-color: #86efac; } .cal-tag-btn.tag-blue { background: #93c5fd; border-color: #93c5fd; } .cal-tag-btn.tag-yellow { background: #fde047; border-color: #fde047; }
+        .cal-events { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+        .cal-event-input { border: 1px solid transparent; font-size: 13px; padding: 4px 6px; border-radius: 4px; outline: none; color: #475569; min-height: 18px; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; display: block; width: 100%; box-sizing: border-box; }
+        .cal-event-input:empty:before { content: attr(placeholder); color: #cbd5e1; pointer-events: none; }
+        .cal-event-input:hover { background: #f8fafc; border-color: #e2e8f0; }
+        .cal-event-input:focus { background: #eff6ff; border-color: var(--primary); white-space: normal; overflow: visible; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); z-index: 10; position: relative; }
+
+        /* WEEKLY PLANNER CSS */
+        .weekly-header { display: flex; justify-content: center; align-items: center; padding-bottom: 0; margin-bottom: 20px; border-bottom: none; }
+        .weekly-date-range { font-size: 18px; font-weight: bold; color: var(--primary); background: #eff6ff; padding: 8px 16px; border-radius: 8px; width: 100%; text-align: center; }
+        .matrix-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; min-width: 0; }
+        .matrix-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+        .matrix-box h4 { margin-top: 0; margin-bottom: 15px; font-size: 15px; border-bottom: 2px solid; padding-bottom: 8px; display: inline-block; }
+        .matrix-box.q1 { background: #fff0f2; border-color: #ffe4e6; } .matrix-box.q1 h4 { color: #e11d48; border-color: #e11d48; }
+        .matrix-box.q2 { background: #f0fdf4; border-color: #dcfce3; } .matrix-box.q2 h4 { color: #16a34a; border-color: #16a34a; }
+        .matrix-box.q3 { background: #fffbeb; border-color: #fef3c7; } .matrix-box.q3 h4 { color: #d97706; border-color: #d97706; }
+        .matrix-box.q4 { background: #f8fafc; border-color: #f1f5f9; } .matrix-box.q4 h4 { color: #64748b; border-color: #64748b; }
+        .matrix-box .task-row { background: rgba(255, 255, 255, 0.6); margin-bottom: 8px; padding: 4px 8px; }
+        
+        /* HABIT TRACKER NÂNG CẤP DẠNG THẺ PASTEL TRÁI - PHẢI */
+        .weekly-two-col { display: flex; gap: 24px; align-items: stretch; }
+        .habit-left-col { display: flex; flex-direction: column; gap: 16px; flex-shrink: 0; }
+        .matrix-wrapper { flex: 1; min-width: 0; }
+        .habit-container { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; background: #f8fafc; overflow-x: auto; }
+        .habit-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .habit-header-bar h3 { margin: 0; color: #1e293b; font-size: 14px; }
+
+        /* Progress circles panel */
+        .habit-circles-panel { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background: #f8fafc; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .habit-circles-title { font-size: 13px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px; }
+        .habit-circles-row { display: flex; gap: 10px; justify-content: space-around; align-items: center; }
+        .habit-circle-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .habit-circle-svg { transform: rotate(-90deg); }
+        .habit-circle-label { font-size: 11px; font-weight: bold; text-align: center; max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .habit-review-btn { background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(37,99,235,0.2); }
+        .habit-review-btn:hover { background: #1d4ed8; transform: translateY(-1px); }
+        
+        .habit-row { display: flex; align-items: center; margin-bottom: 10px; box-sizing: border-box; gap: 15px; }
+        .habit-drag-item { transition: opacity 0.2s; }
+        .habit-drag-item.dragging { opacity: 0.4; }
+        
+        .habit-card-left { display: flex; align-items: center; width: 220px; flex: 0 0 220px; padding: 8px 12px; border-radius: 8px; gap: 10px; box-sizing: border-box; transition: 0.2s; border: 1px solid rgba(0,0,0,0.05); }
+        .habit-spacer { width: 220px; flex: 0 0 220px; }
+        
+        .drag-handle { font-size: 16px; cursor: grab; opacity: 0.6; transition: 0.2s; flex-shrink: 0; display: inline-flex; align-items: center; }
+        .drag-handle:hover { opacity: 1; }
+        .habit-card-clickable { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: 0.15s; }
+        .habit-card-clickable:hover { background: rgba(255,255,255,0.5); }
+        .habit-color-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 2px rgba(255,255,255,0.6); }
+        .habit-card-title-display { flex: 1; min-width: 0; font-size: 13px; font-weight: bold; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .habit-edit-color-swatch { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: 0.15s; border: 3px solid transparent; }
+        .habit-edit-color-swatch:hover { transform: scale(1.08); }
+        
+        .habit-checkboxes { display: flex; gap: 20px; flex-shrink: 0; align-items: center; }
+        .habit-day-label { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #64748b; font-size: 13px; box-sizing: border-box; }
+
+        /* HABIT REVIEW MODAL */
+        #habit-review-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:10001; justify-content:center; align-items:center; backdrop-filter: blur(4px); }
+        .modal-content { background:white; padding:25px; border-radius:16px; width:90%; max-width:560px; max-height:85vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .stat-badge { background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 12px; color: #475569; display: inline-flex; align-items: center; gap: 4px;}
+
+        /* DAILY PLANNER CSS */
+        .daily-week-nav { display: flex; gap: 8px; margin-bottom: 25px; width: 100%; }
+        .d-nav-btn { flex: 1; padding: 12px 0; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-weight: bold; color: #64748b; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .d-nav-btn:hover { background: #eff6ff; color: var(--primary); }
+        .d-nav-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .daily-header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .date-display { font-size: 16px; font-weight: bold; color: #475569; }
+        .mini-timer { display: flex; align-items: center; gap: 10px; background: #fff1f2; padding: 6px 14px; border-radius: 20px; border: 1px solid #ffe4e6; font-size: 14px; }
+        #mini-clock { font-weight: bold; color: #e11d48; font-variant-numeric: tabular-nums; font-size: 16px; }
+        #mini-status { color: #64748b; font-weight: 500; }
+        .mood-tracker { display: flex; gap: 8px; align-items: center; }
+        .mood-btn { font-size: 22px; background: none; border: none; cursor: pointer; opacity: 0.3; transition: 0.2s; }
+        .mood-btn.active { opacity: 1; transform: scale(1.15); }
+        .task-container h3 { color: #1e293b; font-size: 16px; margin-bottom: 20px; }
+        .task-row.focusing { background: #fff5f5; border: 1px dashed #fca5a5; }
+        .est-pomo-input { width: 65px; padding: 6px 4px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; font-size: 13px; outline: none; background: white; margin-left: 10px; flex-shrink: 0; }
+        .row-pomo-btn { background: none; border: none; cursor: pointer; padding: 4px; margin: 0 10px; transition: 0.2s; display: flex; align-items: center; justify-content: center; outline: none; color: #94a3b8; flex-shrink: 0; }
+        .row-pomo-btn:hover { transform: scale(1.1); color: #e11d48; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        .row-pomo-btn.running svg { animation: pulse 1.5s infinite; color: #e11d48; stroke: #e11d48; }
+        .pomo-boxes { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap;}
+        .notes-area { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; resize: vertical; font-family: inherit; font-size: 14px; margin-top: 25px; background: #fafafa; outline: none;}
+        .notes-area:focus { border-color: var(--primary); }
+        .footer-row { display: flex; justify-content: flex-end; margin-top: 15px; align-items: center; gap: 10px; font-weight: bold; font-size: 14px; color: #475569; }
+
+        /* FINANCE CSS */
+        .finance-layout { display: flex; gap: 25px; margin-top: 15px; }
+        .finance-col { flex: 1; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background: #ffffff; min-height: 480px; display: flex; flex-direction: column; }
+        .fin-tab-bar { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; overflow-x: auto;}
+        .fin-tab-btn { padding: 8px 14px; border: none; background: #f1f5f9; color: #64748b; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; white-space: nowrap;}
+        .fin-tab-btn:hover { background: #e2e8f0; } .fin-tab-btn.active { background: #93c5fd; color: #1e3a8a; }
+        .fin-sub-section { display: none; flex-direction: column; gap: 14px; flex: 1; } .fin-sub-section.active { display: flex; }
+        .fin-group { display: flex; flex-direction: column; gap: 6px; } .fin-group label { font-size: 13px; font-weight: bold; color: #475569; }
+        .fin-input, .fin-select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; font-family: inherit; } .fin-input:focus, .fin-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .fin-select optgroup { font-weight: bold; color: #1e293b; font-style: normal; }
+        .fin-btn { background: #93c5fd; color: #1e3a8a; border: none; padding: 12px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; } .fin-btn:hover { background: #60a5fa; } .fin-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .fin-stat-box { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; margin-top: 20px; transition: 0.3s ease; } .fin-stat-num { font-size: 32px; font-weight: bold; color: inherit; margin: 10px 0; font-variant-numeric: tabular-nums; }
+        .budget-progress-item { margin-bottom: 18px; } 
+        
+        /* CẬP NHẬT CHART VIEW LAYOUT */
+        .chart-view-layout { display: flex; gap: 20px; align-items: center; width: 100%; margin-top: 15px; }
+        .chart-wrapper { flex: 1; max-width: 50%; margin: 0 auto; }
+        .fin-legend-list { flex: 1; display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 5px; }
+        .fin-legend-item { display: flex; justify-content: space-between; font-size: 13px; padding: 10px 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        
+        .quick-add-wrapper { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
+        .quick-chip { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 20px; padding: 6px 12px; font-size: 12px; font-weight: 500; color: #475569; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 4px; }
+        .quick-chip:hover { background: #eff6ff; border-color: var(--primary); color: var(--primary); }
+
+        .cat-list-group { margin-bottom: 20px; }
+        .cat-list-group h5 { margin: 0 0 10px 0; color: var(--primary); font-size: 14px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
+        .cat-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 6px; font-size: 14px; transition: 0.2s; border: 1px solid transparent; }
+        .cat-item:hover { border-color: #cbd5e1; background: white; }
+        .cat-item select { padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none; background: white; }
+        .cat-item-actions { display: flex; gap: 10px; align-items: center; }
+        .btn-del { color: #ef4444; cursor: pointer; border: none; background: #fee2e2; border-radius: 4px; font-size: 12px; padding: 4px 8px; transition: 0.2s; font-weight: bold; }
+        .btn-del:hover { background: #ef4444; color: white; }
+
+        /* ========================================================= */
+        /* --- ĐÁP ỨNG MÀN HÌNH ĐIỆN THOẠI --- */
+        /* ========================================================= */
+        @media (max-width: 768px) {
+            body { height: 100dvh; }
+            .sidebar { position: fixed; bottom: 0; left: 0; width: 100%; height: calc(var(--tab-height) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); flex-direction: row; justify-content: space-around; align-items: center; padding-top: 5px; padding-left: 10px; padding-right: 10px; box-sizing: border-box; border-top: 1px solid #e2e8f0; border-right: none; z-index: 9999; background: white; gap: 5px; }
+            .sidebar h2 { display: none; }
+            .menu-btn { flex-direction: column; font-size: 11px; padding: 8px 4px; gap: 4px; justify-content: center; align-items: center; text-align: center; border-radius: 8px; flex: 1; min-width: 0; white-space: nowrap; line-height: 1.2; }
+            
+            .main-content { padding: 15px; height: 100dvh; box-sizing: border-box; padding-bottom: calc(var(--tab-height) + env(safe-area-inset-bottom) + 50px) !important; overflow-x: hidden; }
+            .planner-section { padding: 16px; }
+            .goal-matrix { grid-template-columns: 1fr; gap: 15px; }
+            .finance-layout { flex-direction: column; gap: 15px; }
+            .finance-col { min-height: auto; padding: 15px;}
+            
+            .weekly-date-range { font-size: 14px; padding: 6px 10px; } 
+            
+            /* HABIT TRACKER MOBILE */
+            .weekly-two-col { flex-direction: column; gap: 0; }
+            .habit-left-col { width: 100%; }
+            .habit-circles-panel { display: none !important; }
+            .matrix-wrapper { width: 100%; }
+            .habit-container { padding: 12px 10px; margin-bottom: 12px; overflow-x: auto; width: 100%; box-sizing: border-box; }
+            .habit-header-bar { min-width: 480px; margin-bottom: 12px; }
+            .habit-header-bar h3 { font-size: 14px; }
+
+            .habit-row { width: auto; min-width: 480px; box-sizing: border-box; margin-bottom: 10px; gap: 6px; }
+            .habit-card-left { padding: 6px 10px; gap: 6px; width: 180px; flex: 0 0 180px; min-width: 0; }
+            .habit-spacer { width: 180px; flex: 0 0 180px; }
+            .habit-card-clickable { min-width: 0; gap: 5px; }
+            .habit-card-title-display { min-width: 0; font-size: 12px; }
+            .habit-checkboxes { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; flex: 1 1 0%; min-width: 0; align-items: center; }
+            .habit-day-label { width: auto; min-width: 0; justify-content: center; font-size: 11px; display: flex; }
+            .habit-box { width: 20px; height: 20px; margin: 0 auto; justify-self: center; }
+
+            .matrix-container { grid-template-columns: 1fr 1fr !important; gap: 10px; margin-bottom: 20px; width: 100%; box-sizing: border-box; }
+            .matrix-box { padding: 12px; border-radius: 10px; min-width: 0; border-width: 1.5px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+            .matrix-box h4 { font-size: 13px; margin-bottom: 8px; padding-bottom: 4px; }
+            .matrix-box .task-row { margin-bottom: 6px; padding: 4px 6px; }
+            .matrix-box .task-input { font-size: 12px; padding: 2px; }
+            
+            /* DAILY FIX */
+            .daily-week-nav { gap: 4px; margin-bottom: 15px; } .d-nav-btn { font-size: 12px; padding: 10px 0; }
+            .daily-header-flex { justify-content: center; } .date-display { font-size: 15px; width: 100%; text-align: center; margin-bottom: 5px;} .mood-tracker { width: 100%; justify-content: center; margin-top: 10px; }
+            /* Daily task rows: main line + pomo boxes xuống dưới */
+            #task-list .task-row { flex-direction: column; align-items: stretch; gap: 4px; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: transparent; border-radius: 0; margin-bottom: 0; }
+            #task-list .daily-task-main { display: flex; align-items: center; gap: 8px; width: 100%; }
+            #task-list .task-input { flex: 1; min-width: 0; padding: 2px 4px; }
+            .est-pomo-input { margin-left: 0; width: 55px; flex-shrink: 0; }
+            #task-list .pomo-boxes { gap: 5px; padding-left: 30px; }  /* 22px done-box + 8px gap */
+            /* Matrix + Goals: giữ checkbox và text cùng hàng */
+            .matrix-box .task-row, .goal-card .task-row { flex-wrap: nowrap; align-items: center; gap: 8px; background: transparent; padding: 4px 6px; }
+            .matrix-box .task-input, .goal-card .task-input { min-width: 0; flex: 1; font-size: 13px; padding: 2px 4px; border-bottom: none; margin: 0; }
+            .matrix-box .task-done-box, .goal-card .task-done-box { flex-shrink: 0; width: 20px; height: 20px; margin-right: 6px; }
+            
+            .calendar-header-bar { flex-direction: column; gap: 10px; } 
+            .calendar-grid-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
+            .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(110px, 1fr)); width: max-content; }
+            .cal-day-name { font-size: 13px; }
+            .cal-cell { min-height: 100px; padding: 6px; } 
+            .cal-event-input { font-size: 12px; min-height: 18px; }
+            
+            .yearly-header h2 { font-size: 20px; } .woy-input { font-size: 18px; }
+            
+            .cat-item { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .cat-item-actions { width: 100%; justify-content: space-between; }
+
+            .chart-view-layout { flex-direction: column; align-items: stretch; }
+            .chart-wrapper { max-width: 80%; margin: 0 auto 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-loader">
+        <div class="spinner"></div>
+        <div style="color: #64748b; font-weight: bold;">Đang kết nối đám mây...</div>
+    </div>
+
+    <div class="cloud-badge">
+        <span id="cloud-badge-icon">⏳</span>
+        <span id="cloud-badge-text">Đang kết nối</span>
+    </div>
+
+    <div id="habit-review-modal" onclick="if(event.target===this) closeHabitReview()">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #e2e8f0; padding-bottom:10px; position:sticky; top:0; background:white; z-index:1;">
+                <h3 style="margin:0; color:var(--primary);">📊 Tổng quan Thói quen</h3>
+                <button onclick="closeHabitReview()" style="border:none; background:#f1f5f9; color:#64748b; width:30px; height:30px; border-radius:50%; font-size:14px; cursor:pointer; font-weight:bold;">✖</button>
+            </div>
+            <div id="habit-review-content"></div>
+        </div>
+    </div>
+
+    <div id="habit-edit-modal" onclick="if(event.target===this) closeHabitEdit()" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:10002; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+        <div style="background:white; padding:25px; border-radius:16px; width:90%; max-width:380px; box-shadow:0 10px 25px rgba(0,0,0,0.15);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">
+                <h3 style="margin:0; color:var(--primary);">✏️ Chỉnh sửa thói quen</h3>
+                <button onclick="closeHabitEdit()" style="border:none; background:#f1f5f9; color:#64748b; width:30px; height:30px; border-radius:50%; font-size:14px; cursor:pointer; font-weight:bold;">✖</button>
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">Tên thói quen</label>
+                <input id="habit-edit-text" type="text" placeholder="Nhập tên thói quen..." style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:15px; font-weight:bold; color:#1e293b; outline:none; box-sizing:border-box; font-family:inherit; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+            <div style="margin-bottom:24px;">
+                <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:12px;">Màu sắc</label>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <div id="habit-edit-colors" style="display:contents;"></div>
+                    <div style="position:relative; width:34px; height:34px; flex-shrink:0;" title="Chọn màu tuỳ chỉnh">
+                        <input type="color" id="habit-edit-custompicker" value="#94a3b8"
+                            style="position:absolute; opacity:0; width:34px; height:34px; cursor:pointer; top:0; left:0; border:none; padding:0;"
+                            oninput="document.querySelectorAll('.habit-edit-color-swatch').forEach(s=>s.style.borderColor='transparent'); document.getElementById('habit-picker-circle').style.background=this.value;">
+                        <div id="habit-picker-circle" style="width:34px; height:34px; border-radius:50%; background:#e2e8f0; border:3px solid transparent; display:flex; align-items:center; justify-content:center; pointer-events:none; box-shadow:0 1px 3px rgba(0,0,0,0.15);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#64748b;">
+                                <path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41-6.6 6.6A2 2 0 0 0 5 16v3h3a2 2 0 0 0 1.42-.59l6.6-6.6 1.41 1.42 1.42-1.42-1.42-1.41 3.12-3.12a1 1 0 0 0 0-1.65zM8 17H7v-1l6.59-6.59 1 1z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="saveHabitEdit()" style="flex:1; background:var(--primary); color:white; border:none; padding:11px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='var(--primary)'">💾 Lưu</button>
+                <button onclick="if(confirm('Xoá thói quen này?')) deleteHabit(editingHabitIndex)" style="background:#fee2e2; color:#ef4444; border:none; padding:11px 14px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">🗑️</button>
+                <button onclick="closeHabitEdit()" style="flex:1; background:#f1f5f9; color:#64748b; border:none; padding:11px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">Huỷ</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <h2>📔 Self Planner</h2>
+        <button class="menu-btn" onclick="switchTab('yearly')">🎯 Goals</button>
+        <button class="menu-btn" onclick="switchTab('calendar')">📅 Month</button>
+        <button class="menu-btn" onclick="switchTab('weekly')">📝 Week</button>
+        <button class="menu-btn active" onclick="switchTab('daily')">☀️ Day</button>
+        <button class="menu-btn" onclick="switchTab('finance')">💰 Finance</button>
+    </div>
+
+    <div class="main-content">
+        <div id="yearly" class="planner-section">
+            <div class="yearly-header">
+                <h2>Tầm Nhìn & Mục Tiêu <span id="current-year-display">...</span></h2>
+                <div class="year-progress-box">
+                    <div class="budget-labels"><span style="color:#475569;">Tiến độ cạn kiệt của năm: <span id="year-percent-text" style="color:#e11d48; font-weight:bold;">0%</span></span><span id="year-days-left" style="color:#1e293b;">Còn ... ngày</span></div>
+                    <div class="progress-track"><div class="progress-fill" id="year-progress-bar" style="width: 0%; background-color: #fca5a5;"></div></div>
+                </div>
+            </div>
+            <div class="word-of-year">
+                <label>TỪ KHÓA CỦA NĂM (WORD OF THE YEAR):</label>
+                <input type="text" id="woy-input" class="woy-input" placeholder="Ví dụ: KỶ LUẬT, CÂN BẰNG..." oninput="saveYearly()">
+            </div>
+            <div class="goal-matrix">
+                <div class="goal-card g-career"><h4>🩺 Sự nghiệp & Học tập</h4><div id="g-list-career"></div></div>
+                <div class="goal-card g-finance"><h4>💰 Tài chính cá nhân</h4><div id="g-list-finance"></div></div>
+                <div class="goal-card g-health"><h4>🌱 Sức khỏe & Đời sống</h4><div id="g-list-health"></div></div>
+                <div class="goal-card g-hobby"><h4>🎮 Giải trí & Sở thích</h4><div id="g-list-hobby"></div></div>
+            </div>
+        </div>
+
+        <div id="calendar" class="planner-section">
+            <div class="monthly-goals"><h3>GOALS OF THE MONTH</h3><div id="monthly-goals-list"></div></div>
+            <div class="calendar-container">
+                <div class="calendar-header-bar"><button class="cal-nav-btn" onclick="changeMonth(-1)">◀ Tháng trước</button><h3 id="month-year-display">Tháng ..., ...</h3><button class="cal-nav-btn" onclick="changeMonth(1)">Tháng sau ▶</button></div>
+                <div class="cal-toolbar">
+                    <span style="font-size: 13px; color: #94a3b8; font-style: italic; margin-right: 5px;">Bôi đen chữ để định dạng:</span>
+                    <button class="fmt-btn" onclick="formatText('bold')" title="In đậm"><b>B</b></button>
+                    <button class="fmt-btn" onclick="formatText('italic')" title="In nghiêng"><i>I</i></button>
+                    <label class="fmt-picker" title="Đổi màu chữ">Màu chữ:<input type="color" value="#dc2626" onchange="formatText('foreColor', this.value)"></label>
+                    <label class="fmt-picker" title="Đổi màu nền">Nền (Highlight):<input type="color" value="#fef08a" onchange="formatText('hiliteColor', this.value)"></label>
+                </div>
+                <div class="calendar-grid-wrapper">
+                    <div class="calendar-grid" id="calendar-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="weekly" class="planner-section">
+            <div class="weekly-header">
+                <div class="weekly-date-range" id="weekly-date-range">...</div>
+            </div>
+            
+            <div class="weekly-two-col">
+                <div class="habit-left-col">
+                    <div class="habit-container">
+                        <div class="habit-header-bar">
+                            <h3>🔄 HABIT TRACKER</h3>
+                            <button class="habit-review-btn" onclick="openHabitReview()">📊 Habit Review</button>
+                        </div>
+                        <div id="habit-list"></div>
+                    </div>
+                    <div class="habit-circles-panel" id="habit-circles-panel">
+                        <div class="habit-circles-title">📈 Weekly Habit Progress</div>
+                        <div class="habit-circles-row" id="habit-circles-row"></div>
+                    </div>
+                </div>
+
+                <div class="matrix-wrapper">
+                    <div class="matrix-container">
+                        <div class="matrix-box q1" id="matrix-q1"></div>
+                        <div class="matrix-box q3" id="matrix-q3"></div>
+                        <div class="matrix-box q2" id="matrix-q2"></div>
+                        <div class="matrix-box q4" id="matrix-q4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="daily" class="planner-section active">
+            <div class="daily-week-nav">
+                <button class="d-nav-btn" onclick="setDailyToDay(1)">T2</button>
+                <button class="d-nav-btn" onclick="setDailyToDay(2)">T3</button>
+                <button class="d-nav-btn" onclick="setDailyToDay(3)">T4</button>
+                <button class="d-nav-btn" onclick="setDailyToDay(4)">T5</button>
+                <button class="d-nav-btn" onclick="setDailyToDay(5)">T6</button>
+                <button class="d-nav-btn" onclick="setDailyToDay(6)">T7</button>
+                <button class="d-nav-btn" onclick="setDailyToDay(7)">CN</button>
+            </div>
+            
+            <div class="daily-header-flex">
+                <div class="date-display" id="current-daily-date">Thứ ..., ngày ...</div>
+                <div class="mini-timer"><span id="mini-clock">25:00</span><span id="mini-status">Sẵn sàng</span></div>
+                <div class="mood-tracker">
+                    <button class="mood-btn" onclick="selectMood(this, '😫')">😫</button>
+                    <button class="mood-btn" onclick="selectMood(this, '😐')">😐</button>
+                    <button class="mood-btn" onclick="selectMood(this, '🙂')">🙂</button>
+                    <button class="mood-btn" onclick="selectMood(this, '🤩')">🤩</button>
+                </div>
+            </div>
+            <div class="task-container"><h3>TASKS OF THE DAY</h3><div id="task-list"></div></div>
+            <textarea class="notes-area" id="daily-notes" rows="4" placeholder="Viết ghi chú ngày hôm nay vào đây..." oninput="saveDailyData()"></textarea>
+            <div class="footer-row"><label for="review-check">Review Weekly Planner</label><input type="checkbox" id="review-check" onchange="saveDailyData()"></div>
+        </div>
+
+        <div id="finance" class="planner-section">
+            <h2>💰 Quản lý Tài chính Cá nhân</h2>
+            <div class="finance-layout">
+                <div class="finance-col">
+                    <div class="fin-tab-bar">
+                        <button class="fin-tab-btn active" onclick="switchFinSubTab('left', 'fin-entry', this)">📝 Ghi chú</button>
+                        <button class="fin-tab-btn" onclick="switchFinSubTab('left', 'fin-budget-set', this)">⚙️ Hạn mức</button>
+                        <button class="fin-tab-btn" onclick="switchFinSubTab('left', 'fin-category-set', this)">🗂️ Phân nhóm</button>
+                    </div>
+                    
+                    <div id="fin-entry" class="fin-sub-section active">
+                        <div class="fin-group">
+                            <label>⚡ Phím tắt ghi nhanh</label>
+                            <div class="quick-add-wrapper">
+                                <button class="quick-chip" onclick="quickAddTx(80, 'Ăn ngoài', 'Cơm tấm')">🍱 Cơm tấm (80k)</button>
+                                <button class="quick-chip" onclick="quickAddTx(50, 'Xăng, bảo dưỡng xe', 'Đổ xăng')">🛵 Đổ xăng (50k)</button>
+                            </div>
+                        </div>
+
+                        <div class="fin-group"><label>Ngày ghi nhận</label><input type="date" id="fin-date" class="fin-input"></div>
+                        <div class="fin-group"><label>Số tiền (Nghìn đồng)</label><input type="number" id="fin-amount" class="fin-input" placeholder="Ví dụ: 50 (Tương đương 50.000đ)" inputmode="numeric"></div>
+                        <div class="fin-group">
+                            <label>Phân mục</label>
+                            <select id="fin-category" class="fin-select"></select>
+                        </div>
+                        <div class="fin-group"><label>Ghi chú chi tiết</label><input type="text" id="fin-note" class="fin-input" placeholder="Ví dụ: Cơm tấm trưa"></div>
+                        <button class="fin-btn" id="btn-submit-tx" onclick="addTransaction()">Ghi vào sổ số liệu</button>
+                    </div>
+                    
+                    <div id="fin-budget-set" class="fin-sub-section">
+                        <p style="font-size:13px; color:#64748b; margin:0 0 10px 0;">Thiết lập ngân sách hàng tháng (Đơn vị: Nghìn đồng)</p>
+                        <div class="fin-group"><label>Tiết kiệm / Đầu tư (k)</label><input type="number" id="b-savings" class="fin-input" value="5000"></div>
+                        <div class="fin-group"><label>Chi phí cố định (k)</label><input type="number" id="b-fixed" class="fin-input" value="4000"></div>
+                        <div class="fin-group"><label>Chi phí linh hoạt (k)</label><input type="number" id="b-flexible" class="fin-input" value="6000"></div>
+                        <button class="fin-btn" onclick="saveBudgets()">Cập nhật hạn mức</button>
+                    </div>
+
+                    <div id="fin-category-set" class="fin-sub-section">
+                        <p style="font-size:13px; color:#64748b; margin:0 0 10px 0;">Thêm phân mục mới hoặc chuyển đổi nhóm</p>
+                        <div style="display:flex; gap:6px; margin-bottom: 20px;">
+                            <input type="text" id="new-cat-name" class="fin-input" placeholder="Tên mục mới..." style="flex:1;">
+                            <select id="new-cat-group" class="fin-select" style="max-width:120px;">
+                                <option value="Tiết kiệm/ đầu tư">Tiết kiệm</option>
+                                <option value="Chi phí cố định">Cố định</option>
+                                <option value="Chi phí linh hoạt" selected>Linh hoạt</option>
+                            </select>
+                            <button class="fin-btn" style="margin-top:0; padding:10px 15px;" onclick="addNewCategory()">Thêm</button>
+                        </div>
+                        <div id="category-list-container" style="overflow-y: auto; max-height: 350px; padding-right: 5px;"></div>
+                    </div>
+
+                </div>
+                <div class="finance-col">
+                    <div class="fin-tab-bar">
+                        <button class="fin-tab-btn active" onclick="switchFinSubTab('right', 'fin-day-view', this)">💳 Chi tiêu Ngày</button>
+                        <button class="fin-tab-btn" onclick="switchFinSubTab('right', 'fin-week-view', this)">📅 Chi tiêu Tuần</button>
+                        <button class="fin-tab-btn" onclick="switchFinSubTab('right', 'fin-month-view', this)">📊 Chi tiêu Tháng</button>
+                        <button class="fin-tab-btn" onclick="switchFinSubTab('right', 'fin-chart-view', this)">📊 Biểu đồ</button>
+                    </div>
+                    
+                    <div id="fin-day-view" class="fin-sub-section active"></div>
+
+                    <div id="fin-week-view" class="fin-sub-section">
+                        <div style="display:flex; gap:16px; width:100%; flex-wrap:wrap;">
+                            <!-- CỘT TRÁI: Tổng chi phí linh hoạt -->
+                            <div style="flex:0 0 220px; display:flex; flex-direction:column; gap:12px;">
+                                <div class="fin-stat-box" id="week-stat-box" style="flex:none;">
+                                    <h4 style="margin:0 0 8px 0; color:inherit; font-size:14px;">🛍️ Chi phí linh hoạt tuần này</h4>
+                                    <div class="fin-stat-num" id="week-flex-total" style="color:inherit; font-size:28px;">0đ</div>
+                                    <p style="margin:8px 0 0 0; font-size:11px; color:inherit; opacity:0.7;">Thứ 2 → Chủ nhật tuần này</p>
+                                </div>
+                                <div id="week-budget-bar" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px;"></div>
+                            </div>
+                            <!-- CỘT PHẢI: Danh sách theo nhóm -->
+                            <div style="flex:1; min-width:180px; overflow-y:auto; max-height:360px;">
+                                <h4 style="margin:0 0 12px 0; color:#334155; font-size:13px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">📋 Chi tiết theo nhóm</h4>
+                                <div id="week-flex-breakdown"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="fin-month-view" class="fin-sub-section"><h4 style="margin:0 0 15px 0; color:#334155;">Tình hình ngân sách tháng hiện tại</h4><div id="month-progress-container"></div></div>
+                    
+                    <div id="fin-chart-view" class="fin-sub-section">
+                        <h4 style="margin:0; text-align:center; color:#334155; font-size:14px; width:100%;">Tỷ trọng tổng chi tiêu theo toàn bộ phân mục</h4>
+                        <div class="chart-view-layout">
+                            <div class="chart-wrapper"><canvas id="finPieChart"></canvas></div>
+                            <div id="fin-legend-list" class="fin-legend-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function switchTab(tabId) { document.querySelectorAll('.planner-section').forEach(s => s.classList.remove('active')); document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active')); document.getElementById(tabId).classList.add('active'); event.currentTarget.classList.add('active'); if(tabId === 'finance') { recalculateFinance(); } }
+        function switchFinSubTab(side, targetId, btn) { const col = btn.closest('.finance-col'); col.querySelectorAll('.fin-tab-btn').forEach(b => b.classList.remove('active')); col.querySelectorAll('.fin-sub-section').forEach(s => s.classList.remove('active')); btn.classList.add('active'); document.getElementById(targetId).classList.add('active'); if(targetId === 'fin-chart-view') { updatePieChart(); } }
+
+        const CLOUD_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz0EOwK-peWCcyXEpHCI5MJ5KH_JEcunA18PFkH4TPAAv9jjx7OHqfwfViwG7Wxu4uT/exec";
+        
+        let cloudState = {}; 
+        let syncTimers = {};
+
+        // So sánh 2 phiên bản dữ liệu cùng key, ưu tiên bản có nhiều nội dung thực hơn (tránh bản rỗng ghi đè bản có dữ liệu)
+        function contentScore(obj) {
+            try {
+                const s = JSON.stringify(obj);
+                // Đếm số ký tự "có nghĩa": bỏ dấu ngoặc, false, "", 0, rỗng
+                let score = 0;
+                if (obj && typeof obj === 'object') {
+                    const walk = (v) => {
+                        if (v === null || v === undefined) return;
+                        if (typeof v === 'string') { if (v.trim()) score += v.trim().length; }
+                        else if (typeof v === 'number') { if (v) score += 1; }
+                        else if (typeof v === 'boolean') { if (v) score += 1; }
+                        else if (Array.isArray(v)) v.forEach(walk);
+                        else if (typeof v === 'object') Object.values(v).forEach(walk);
+                    };
+                    walk(obj);
+                }
+                return score;
+            } catch(e) { return 0; }
+        }
+        function mergePreferNonEmpty(cloudVal, localVal) {
+            // Bản nào nhiều nội dung hơn thì giữ; nếu bằng nhau ưu tiên local (bản người dùng vừa nhập trên máy)
+            const cScore = contentScore(cloudVal);
+            const lScore = contentScore(localVal);
+            return lScore >= cScore ? localVal : cloudVal;
+        }
+
+        async function initCloudApp() {
+            let cloudLoaded = false;
+            try {
+                const res = await fetch(CLOUD_WEBHOOK_URL);
+                const textData = await res.text();
+                
+                try {
+                    cloudState = JSON.parse(textData);
+                    cloudLoaded = true;
+                    document.getElementById('cloud-badge-text').innerText = "Đã đồng bộ";
+                    document.getElementById('cloud-badge-icon').innerText = "🟢";
+                } catch (parseErr) {
+                    console.warn("Dữ liệu lỗi, dùng Offline mode.");
+                    throw new Error("Invalid JSON");
+                }
+            } catch(e) {
+                console.error("Chuyển sang Offline Mode:", e);
+                document.getElementById('cloud-badge-text').innerText = "Chế độ Offline";
+                document.getElementById('cloud-badge-icon').innerText = "🔴";
+                cloudState = JSON.parse(localStorage.getItem('offline_backup')) || {};
+            }
+
+            // Cloud là nguồn chân lý. localStorage CHỈ dùng để:
+            //  (a) khôi phục khi không tải được cloud (offline), hoặc
+            //  (b) giữ lại thay đổi CHƯA kịp gửi lên cloud (còn 'dirty').
+            // Nhờ vậy khi máy khác cập nhật, máy này refresh sẽ nhận đúng bản mới nhất từ cloud.
+            try {
+                const localBackup = JSON.parse(localStorage.getItem('offline_backup')) || {};
+                const localMeta = JSON.parse(localStorage.getItem('offline_meta')) || {};
+                if (cloudLoaded) {
+                    // Chỉ giữ lại bản local cho những key còn 'dirty' (chưa đồng bộ xong)
+                    for (let key in localMeta) {
+                        if (localMeta[key] === 'dirty' && key in localBackup) {
+                            cloudState[key] = localBackup[key];
+                        }
+                    }
+                    // Đồng bộ lại localStorage backup = đúng bản cloud hiện tại (đã gộp dirty) để không tồn dữ liệu cũ
+                    localStorage.setItem('offline_backup', JSON.stringify(cloudState));
+                } else {
+                    // Offline: dùng toàn bộ backup local
+                    for (let key in localBackup) {
+                        if (!(key in cloudState)) cloudState[key] = localBackup[key];
+                    }
+                }
+            } catch(mergeErr) { console.warn("Không merge được backup cục bộ:", mergeErr); }
+
+            // Dọn key chẩn đoán nếu còn sót
+            if (cloudState['diagnostic_test']) { delete cloudState['diagnostic_test']; }
+            
+            const safe = (label, fn) => { try { fn(); } catch(e) { console.error("Lỗi " + label + ":", e); } };
+            safe('updateYearProgress', updateYearProgress);
+            safe('renderYearlyGoals', renderYearlyGoals);
+            safe('setupWeeklyDates', setupWeeklyDates);
+            safe('renderMatrix', renderMatrix);
+            safe('renderHabits', renderHabits);
+            safe('renderMonthlyGoals', renderMonthlyGoals);
+            safe('renderCalendar', renderCalendar);
+            safe('renderDailyTasksDOM', renderDailyTasksDOM);
+            safe('updateDailyHeader', () => { currentDailyDate = new Date(); updateDailyHeader(); });
+            safe('loadFinanceData', loadFinanceData);
+
+            document.getElementById('app-loader').style.display = 'none';
+        }
+
+        function pushToCloud(key, data) {
+            cloudState[key] = data;
+            localStorage.setItem('offline_backup', JSON.stringify(cloudState)); 
+            // Đánh dấu key này là "dirty" (chưa đồng bộ lên cloud)
+            let meta = {};
+            try { meta = JSON.parse(localStorage.getItem('offline_meta')) || {}; } catch(e) {}
+            meta[key] = 'dirty';
+            localStorage.setItem('offline_meta', JSON.stringify(meta));
+            
+            document.getElementById('cloud-badge-text').innerText = "Đang lưu...";
+            document.getElementById('cloud-badge-icon').innerText = "⏳";
+            
+            clearTimeout(syncTimers[key]);
+            syncTimers[key] = setTimeout(async () => {
+                try {
+                    const resp = await fetch(CLOUD_WEBHOOK_URL, {
+                        method: "POST",
+                        body: JSON.stringify({ action: "saveState", key: key, data: data }),
+                        headers: { "Content-Type": "text/plain;charset=utf-8" }
+                    });
+                    // Đọc phản hồi thật từ server để xác nhận lưu thành công
+                    let ok = resp.ok;
+                    try {
+                        const respText = await resp.text();
+                        // Coi là LỖI nếu server báo lỗi rõ ràng (kể cả tiếng Việt), ngược lại tin resp.ok
+                        if (respText && /error|fail|exception|lỗi|thất bại/i.test(respText)) ok = false;
+                    } catch(readErr) { /* không đọc được vẫn dựa vào resp.ok */ }
+
+                    if (ok) {
+                        let meta2 = {};
+                        try { meta2 = JSON.parse(localStorage.getItem('offline_meta')) || {}; } catch(e) {}
+                        delete meta2[key];
+                        localStorage.setItem('offline_meta', JSON.stringify(meta2));
+                        document.getElementById('cloud-badge-text').innerText = "Đã đồng bộ";
+                        document.getElementById('cloud-badge-icon').innerText = "🟢";
+                    } else {
+                        // Server báo lỗi → giữ dirty, dữ liệu vẫn an toàn trong localStorage
+                        document.getElementById('cloud-badge-text').innerText = "Lưu cục bộ (cloud lỗi)";
+                        document.getElementById('cloud-badge-icon').innerText = "🟡";
+                    }
+                } catch(e) {
+                    document.getElementById('cloud-badge-text').innerText = "Lưu cục bộ (Offline)";
+                    document.getElementById('cloud-badge-icon').innerText = "🟡";
+                }
+            }, 1500);
+        }
+
+        function toggleTaskDone(rowId, checkbox) { const row = document.getElementById(rowId); if (checkbox.checked) row.classList.add('completed'); else row.classList.remove('completed'); }
+        function formatText(command, value = null) { document.execCommand(command, false, value); saveMonthly(); }
+
+        // --- YEARLY GOALS ---
+        function updateYearProgress() { const now = new Date(); const year = now.getFullYear(); const start = new Date(year, 0, 1); const end = new Date(year + 1, 0, 1); const percent = ((now - start) / (end - start)) * 100; const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24)); document.getElementById('current-year-display').innerText = year; document.getElementById('year-percent-text').innerText = percent.toFixed(1) + '%'; document.getElementById('year-days-left').innerText = `Còn lại ${daysLeft} ngày`; document.getElementById('year-progress-bar').style.width = percent + '%'; }
+        function renderYearlyGoals() { const data = cloudState['yearly_data'] || { word: "", career: [], finance: [], health: [], hobby: [] }; document.getElementById('woy-input').value = data.word || ""; const sections = ['career', 'finance', 'health', 'hobby']; sections.forEach(sec => { let html = ''; const arr = data[sec] || []; for(let i = 0; i < 5; i++) { const rowId = `y-${sec}-${i}`; const item = arr[i] || {done: false, text: ""}; const checked = item.done ? "checked" : ""; const completed = item.done ? "completed" : ""; html += `<div class="task-row ${completed}" id="${rowId}"><input type="checkbox" class="task-done-box" id="${rowId}-done" onchange="toggleTaskDone('${rowId}', this); saveYearly();" ${checked}><input type="text" class="task-input" id="${rowId}-text" placeholder="• Nhập mục tiêu..." value="${item.text.replace(/"/g, '&quot;')}" oninput="saveYearly()"></div>`; } document.getElementById(`g-list-${sec}`).innerHTML = html; }); }
+        function saveYearly() { const data = { word: document.getElementById('woy-input').value, career: [], finance: [], health: [], hobby: [] }; ['career', 'finance', 'health', 'hobby'].forEach(sec => { for(let i=0; i<5; i++) { data[sec].push({ done: document.getElementById(`y-${sec}-${i}-done`).checked, text: document.getElementById(`y-${sec}-${i}-text`).value }); } }); pushToCloud('yearly_data', data); }
+
+        // --- WEEKLY PLANNER ---
+        function getWeeklyKey() {
+            const today = new Date(); const dayOfWeek = today.getDay(); const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; const monday = new Date(today); monday.setDate(today.getDate() + distanceToMonday);
+            return `weekly_${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+        }
+
+        // Đảm bảo tuần hiện tại đã có dữ liệu; nếu là tuần mới thì kế thừa danh sách habit (tên + màu) từ tuần gần nhất, chỉ reset các ô check
+        function ensureWeeklyInit() {
+            try {
+                const wKey = getWeeklyKey();
+                if (cloudState[wKey] && cloudState[wKey].habits && cloudState[wKey].habits.length > 0) return;
+
+                // Parse ngày của tuần hiện tại
+                const wParts = (wKey.split('_')[1] || '').split('-');
+                if (wParts.length !== 3) return;
+                const wDateObj = new Date(parseInt(wParts[0]), parseInt(wParts[1]) - 1, parseInt(wParts[2]));
+
+                // Tìm tuần gần nhất TRƯỚC tuần hiện tại có habits
+                let latestKey = null, latestDate = null;
+                for (let key in cloudState) {
+                    if (!key.startsWith('weekly_') || key === wKey) continue;
+                    const data = cloudState[key];
+                    if (!data || !Array.isArray(data.habits) || data.habits.length === 0) continue;
+                    const parts = (key.split('_')[1] || '').split('-');
+                    if (parts.length !== 3) continue;
+                    const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    if (isNaN(d.getTime())) continue;
+                    if (d >= wDateObj) continue; // chỉ lấy tuần trước
+                    if (!latestDate || d > latestDate) { latestDate = d; latestKey = key; }
+                }
+
+                const existing = cloudState[wKey] || {};
+                let inheritedHabits = [];
+                if (latestKey) {
+                    inheritedHabits = cloudState[latestKey].habits.map(h => ({
+                        text: h.text || '',
+                        color: h.color || '#94a3b8',
+                        days: [false, false, false, false, false, false, false]
+                    }));
+                }
+                cloudState[wKey] = {
+                    matrix: existing.matrix || {},
+                    habits: (Array.isArray(existing.habits) && existing.habits.length > 0) ? existing.habits : inheritedHabits
+                };
+            } catch (e) {
+                console.error("ensureWeeklyInit lỗi:", e);
+            }
+        }
+
+        function setupWeeklyDates() { 
+            const today = new Date(); const dayOfWeek = today.getDay(); const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; const monday = new Date(today); monday.setDate(today.getDate() + distanceToMonday); const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); 
+            const formatDate = (date) => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`; 
+            document.getElementById('weekly-date-range').innerText = `${formatDate(monday)} - ${formatDate(sunday)}`; 
+        }
+        
+        function renderMatrix() { 
+            const matrixData = [ { id: 'q1', title: '🔥 Quan trọng & Khẩn cấp' }, { id: 'q3', title: '⚡ Khẩn cấp, Ko quan trọng' }, { id: 'q2', title: '🌱 Quan trọng, Ko khẩn cấp' }, { id: 'q4', title: '☕ Ko quan trọng, Ko khẩn cấp' } ]; 
+            const wData = cloudState[getWeeklyKey()] || { matrix: {}, habits: [] };
+            if(!wData.matrix) wData.matrix = {};
+            matrixData.forEach(box => { 
+                let html = `<h4>${box.title}</h4>`; 
+                const qArr = wData.matrix[box.id] || []; 
+                for(let i = 1; i <= 5; i++) { 
+                    const rowId = `matrix-${box.id}-row-${i}`; 
+                    const item = qArr[i-1] || {done: false, text: ""}; 
+                    const itemText = (item.text || "").replace(/"/g, '&quot;');
+                    const checked = item.done ? "checked" : ""; 
+                    const completed = item.done ? "completed" : ""; 
+                    html += `<div class="task-row ${completed}" id="${rowId}"><input type="checkbox" class="task-done-box" id="${rowId}-done" onchange="toggleTaskDone('${rowId}', this); saveWeekly();" ${checked}><input type="text" class="task-input" id="${rowId}-text" placeholder="Nhập mục ${i}..." value="${itemText}" oninput="saveWeekly()"></div>`; 
+                } 
+                const el = document.getElementById(`matrix-${box.id}`);
+                if(el) el.innerHTML = html; 
+            }); 
+        }
+
+        // BẢNG MÀU CHỌN SẴN
+        const HABIT_COLORS = [
+            { hex: '#94a3b8', name: '⚪ Xám' },
+            { hex: '#ef4444', name: '🔴 Đỏ' },
+            { hex: '#ec4899', name: '🌸 Hồng' },
+            { hex: '#a855f7', name: '🟣 Tím' },
+            { hex: '#f97316', name: '🟠 Cam' },
+            { hex: '#eab308', name: '🟡 Vàng' },
+            { hex: '#22c55e', name: '🟢 Xanh lá' },
+            { hex: '#3b82f6', name: '🔵 Xanh dương' }
+        ];
+
+        function renderHabits() {
+            ensureWeeklyInit();
+            const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+            const wData = cloudState[getWeeklyKey()] || { matrix: {}, habits: [] };
+            if(!wData.habits) wData.habits = [];
+
+            let html = `<div class="habit-row" style="margin-bottom: 4px;"><div class="habit-spacer"></div><div class="habit-checkboxes">${days.map(d => `<div class="habit-day-label">${d}</div>`).join('')}</div></div>`;
+
+            wData.habits.forEach((h, i) => {
+                const color = h.color || '#94a3b8';
+                const bgColor = color + '26';
+                const displayText = h.text.trim() || `Thói quen ${i+1}`;
+
+                html += `<div class="habit-row habit-drag-item" draggable="true" ondragstart="dragStart(event, ${i})" ondragover="dragOver(event)" ondrop="drop(event, ${i})">
+                    <div class="habit-card-left" id="habit-card-left-${i}" style="background-color: ${bgColor}; border-left: 3px solid ${color};">
+                        <span class="drag-handle" style="color: ${color};">☰</span>
+                        <div class="habit-card-clickable" onclick="openHabitEdit(${i})">
+                            <span class="habit-card-title-display" style="color: ${h.text.trim() ? '#1e293b' : '#94a3b8'};">${displayText}</span>
+                            <span style="font-size:11px; color:#94a3b8; flex-shrink:0;">✏️</span>
+                        </div>
+                    </div>
+                    <div class="habit-checkboxes">`;
+                for(let d=1; d<=7; d++) {
+                    const checked = h.days[d-1] ? "checked" : "";
+                    html += `<input type="checkbox" class="habit-box" id="habit-${i}-day-${d}" title="${days[d-1]}" onchange="saveWeekly()" ${checked}>`;
+                }
+                html += `   </div>
+                </div>`;
+            });
+
+            // Nút thêm mới
+            html += `<div style="margin-top:10px;">
+                <button onclick="addHabit()" style="background:var(--primary); color:white; border:none; padding:7px 14px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;">➕ Thêm thói quen</button>
+            </div>`;
+
+            document.getElementById('habit-list').innerHTML = html;
+            renderHabitCircles(wData.habits);
+        }
+
+        let isNewHabit = false;
+
+        function addHabit() {
+            isNewHabit = true;
+            editingHabitIndex = -1; // sentinel: chưa có trong array
+            document.getElementById('habit-edit-text').value = '';
+            document.getElementById('habit-edit-custompicker').value = '#94a3b8';
+
+            let swatchHtml = '';
+            HABIT_COLORS.forEach(c => {
+                const isSelected = c.hex === '#94a3b8';
+                swatchHtml += `<div class="habit-edit-color-swatch" style="background:${c.hex}; border-color:${isSelected ? '#1e293b' : 'transparent'};" onclick="selectEditColor('${c.hex}')"></div>`;
+            });
+            document.getElementById('habit-edit-colors').innerHTML = swatchHtml;
+            document.getElementById('habit-edit-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('habit-edit-text').focus(), 100);
+        }
+
+        function deleteHabit(index) {
+            const wData = cloudState[getWeeklyKey()] || {habits:[]};
+            wData.habits.splice(index, 1);
+            pushToCloud(getWeeklyKey(), wData);
+            closeHabitEdit();
+            renderHabits();
+        }
+
+        let dragHabitIndex = null;
+        function dragStart(e, index) { 
+            dragHabitIndex = index; 
+            e.dataTransfer.effectAllowed = 'move'; 
+            e.dataTransfer.setData('text/plain', String(index)); // Firefox cần dữ liệu để bắt đầu drag
+            const row = e.currentTarget;
+            setTimeout(() => row.classList.add('dragging'), 0); 
+        }
+        function dragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
+        function drop(e, dropIndex) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.querySelectorAll('.habit-drag-item').forEach(c => c.classList.remove('dragging'));
+            let fromIndex = dragHabitIndex;
+            if (fromIndex === null) { const dt = e.dataTransfer.getData('text/plain'); if(dt !== '') fromIndex = parseInt(dt); }
+            if (fromIndex === null || isNaN(fromIndex) || fromIndex === dropIndex) { dragHabitIndex = null; return; }
+            // Lưu trạng thái checkbox hiện tại vào mảng TRƯỚC khi hoán đổi
+            saveWeeklyLocalOnly(); 
+            const wData = cloudState[getWeeklyKey()];
+            if(!wData || !Array.isArray(wData.habits)) { dragHabitIndex = null; return; }
+            const draggedItem = wData.habits.splice(fromIndex, 1)[0];
+            wData.habits.splice(dropIndex, 0, draggedItem);
+            pushToCloud(getWeeklyKey(), wData);
+            dragHabitIndex = null;
+            renderHabits();
+        }
+
+        function renderHabitCircles(habits) {
+            const R = 42, STROKE = 7, CIRC = 2 * Math.PI * R;
+            const row = document.getElementById('habit-circles-row');
+            if (!row) return;
+            let html = '';
+            let hasAny = false;
+            habits.forEach(h => {
+                if (!h.text.trim()) return;
+                hasAny = true;
+                const checked = h.days.filter(Boolean).length;
+                const pct = Math.round((checked / 7) * 100);
+                const color = h.color || '#94a3b8';
+                const offset = CIRC * (1 - pct / 100);
+                const size = (R + STROKE) * 2 + 4;
+                const cx = size / 2, cy = size / 2;
+                html += `<div class="habit-circle-item">
+                    <svg class="habit-circle-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+                        <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#e2e8f0" stroke-width="${STROKE}"/>
+                        <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${color}" stroke-width="${STROKE}"
+                            stroke-dasharray="${CIRC}" stroke-dashoffset="${offset.toFixed(1)}"
+                            stroke-linecap="round" style="transition:stroke-dashoffset 0.4s ease;"/>
+                        <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
+                            fill="${color}" font-size="13" font-weight="bold"
+                            style="transform:rotate(90deg); transform-origin:${cx}px ${cy}px;">${pct}%</text>
+                    </svg>
+                    <span class="habit-circle-label" style="color:${color};">${h.text}</span>
+                </div>`;
+            });
+            row.innerHTML = hasAny ? html : '';
+            document.getElementById('habit-circles-panel').style.display = hasAny ? '' : 'none';
+        }
+
+        let editingHabitIndex = null;
+
+        function openHabitEdit(index) {
+            editingHabitIndex = index;
+            const wData = cloudState[getWeeklyKey()] || {habits:[]};
+            const h = wData.habits[index] || {text:'', color:'#94a3b8'};
+            document.getElementById('habit-edit-text').value = h.text;
+            document.getElementById('habit-edit-custompicker').value = h.color || '#94a3b8';
+            document.getElementById('habit-picker-circle').style.background = '#e2e8f0';
+
+            let swatchHtml = '';
+            HABIT_COLORS.forEach(c => {
+                const isSelected = (h.color || '#94a3b8') === c.hex;
+                swatchHtml += `<div class="habit-edit-color-swatch" style="background:${c.hex}; border-color:${isSelected ? '#1e293b' : 'transparent'};" onclick="selectEditColor('${c.hex}')"></div>`;
+            });
+            document.getElementById('habit-edit-colors').innerHTML = swatchHtml;
+            document.getElementById('habit-edit-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('habit-edit-text').focus(), 100);
+        }
+
+        function selectEditColor(hex) {
+            document.querySelectorAll('.habit-edit-color-swatch').forEach(s => {
+                s.style.borderColor = (s.style.background === hex || s.style.backgroundColor === hex) ? '#1e293b' : 'transparent';
+            });
+            document.getElementById('habit-edit-custompicker').value = hex;
+        }
+
+        function saveHabitEdit() {
+            const wData = cloudState[getWeeklyKey()] || {habits:[]};
+            const selectedSwatch = [...document.querySelectorAll('.habit-edit-color-swatch')].find(s => s.style.borderColor === 'rgb(30, 41, 59)');
+            const pickerColor = document.getElementById('habit-edit-custompicker').value;
+            const newColor = selectedSwatch ? selectedSwatch.style.background : pickerColor;
+            const newText = document.getElementById('habit-edit-text').value;
+
+            if (isNewHabit) {
+                wData.habits.push({ text: newText, color: newColor, days: [false,false,false,false,false,false,false] });
+            } else {
+                wData.habits[editingHabitIndex].text = newText;
+                wData.habits[editingHabitIndex].color = newColor;
+            }
+            pushToCloud(getWeeklyKey(), wData);
+            isNewHabit = false;
+            closeHabitEdit();
+            renderHabits();
+        }
+
+        function closeHabitEdit() { document.getElementById('habit-edit-modal').style.display = 'none'; editingHabitIndex = null; isNewHabit = false; }
+
+        function changeHabitColor(index, color) { saveWeeklyLocalOnly(); cloudState[getWeeklyKey()].habits[index].color = color; pushToCloud(getWeeklyKey(), cloudState[getWeeklyKey()]); renderHabits(); }
+
+        function saveWeeklyLocalOnly() {
+            const wKey = getWeeklyKey();
+            const data = cloudState[wKey] || { matrix: {}, habits: [] };
+            if(!data.matrix) data.matrix = {};
+            ['q1', 'q2', 'q3', 'q4'].forEach(q => {
+                data.matrix[q] = [];
+                for(let i=1; i<=5; i++) {
+                    const doneEl = document.getElementById(`matrix-${q}-row-${i}-done`);
+                    const textEl = document.getElementById(`matrix-${q}-row-${i}-text`);
+                    if(!doneEl || !textEl) { data.matrix[q].push({ done: false, text: "" }); continue; }
+                    data.matrix[q].push({ done: doneEl.checked, text: textEl.value });
+                }
+            });
+            // Habits: cập nhật checkbox theo đúng số lượng habit hiện có (không ép về 5)
+            if(!Array.isArray(data.habits)) data.habits = [];
+            for(let i=0; i<data.habits.length; i++) {
+                if(!data.habits[i]) data.habits[i] = {text:'', color:'#94a3b8', days:[]};
+                const newDays = [];
+                for(let d=1; d<=7; d++) {
+                    const el = document.getElementById(`habit-${i}-day-${d}`);
+                    // Nếu checkbox tồn tại trong DOM thì lấy giá trị, nếu không giữ nguyên giá trị cũ
+                    newDays.push(el ? el.checked : (data.habits[i].days ? !!data.habits[i].days[d-1] : false));
+                }
+                data.habits[i].days = newDays;
+            }
+            cloudState[wKey] = data;
+        }
+
+        function saveWeekly() { 
+            saveWeeklyLocalOnly(); 
+            pushToCloud(getWeeklyKey(), cloudState[getWeeklyKey()]);
+            renderHabitCircles(cloudState[getWeeklyKey()].habits);
+        }
+
+        function openHabitReview() {
+            document.getElementById('habit-review-modal').style.display = 'flex';
+            const wData = cloudState[getWeeklyKey()] || {habits:[]};
+            let html = '';
+
+            wData.habits.forEach(h => {
+                if(!h.text.trim()) return;
+                let allTimeChecked = 0, allTimeTotal = 0;
+                let weekHistory = [];
+                for(let key in cloudState) {
+                    if(key.startsWith('weekly_')) {
+                        const weekData = cloudState[key];
+                        const dateParts = key.split('_')[1].split('-');
+                        const wYear = parseInt(dateParts[0]); const wMonth = parseInt(dateParts[1]) - 1; const wDay = parseInt(dateParts[2]);
+                        const habitMatch = (weekData.habits || []).find(hx => hx.text.trim().toLowerCase() === h.text.trim().toLowerCase());
+                        if(habitMatch) {
+                            allTimeTotal += 7; let wCheck = 0;
+                            habitMatch.days.forEach(d => { if(d) { allTimeChecked++; wCheck++; } });
+                            const startDate = new Date(wYear, wMonth, wDay);
+                            const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6);
+                            const pctVal = Number.isFinite(wCheck) ? Math.round((wCheck/7)*100) : 0;
+                            weekHistory.push({ startDate, endDate, pct: pctVal });
+                        }
+                    }
+                }
+                weekHistory = weekHistory.filter(w => Number.isFinite(w.pct) && w.startDate instanceof Date && !isNaN(w.startDate.getTime()) && !isNaN(w.endDate.getTime()));
+                weekHistory.sort((a,b) => a.startDate - b.startDate);
+                const recentWeeks = weekHistory.slice(-4); // 4 tuần gần nhất
+
+                const aPct = (allTimeTotal && Number.isFinite(allTimeChecked/allTimeTotal)) ? Math.round((allTimeChecked/allTimeTotal)*100) : 0;
+                const bgColor = (h.color || '#94a3b8') + '1A';
+                const fmt = (d) => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+
+                let barsHtml = recentWeeks.map((w, idx) => {
+                    const isLast = idx === recentWeeks.length - 1;
+                    const label = `${fmt(w.startDate)}-${fmt(w.endDate)}`;
+                    return `<div style="display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; min-width:0;" title="Tuần ${label}: ${w.pct}%">
+                        <span style="font-size:10px; font-weight:bold; color:${h.color};">${w.pct}%</span>
+                        <div style="width:18px; height:32px; display:flex; align-items:flex-end; background:rgba(255,255,255,0.6); border-radius:3px; overflow:hidden;">
+                            <div style="width:100%; height:${Math.max(w.pct,4)}%; background:${h.color}; opacity:${isLast ? 1 : 0.55}; transition:height 0.3s;"></div>
+                        </div>
+                        <span style="font-size:9px; color:#94a3b8; white-space:nowrap;">${label}</span>
+                    </div>`;
+                }).join('');
+                if(!barsHtml) barsHtml = '<div style="font-size:12px; color:#94a3b8; font-style:italic; padding:6px 0;">Chưa có dữ liệu</div>';
+
+                html += `
+                <div style="margin-bottom:14px; padding:15px; border:1px solid #e2e8f0; background:${bgColor}; border-left:5px solid ${h.color}; border-radius:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:120px;">
+                            <div style="font-weight:bold; margin-bottom:8px; font-size:16px; color:#1e293b;">${h.text}</div>
+                            <span class="stat-badge">🏆 Toàn thời gian: <b style="color:var(--primary);">${aPct}%</b></span>
+                            <div class="progress-track" style="background:rgba(255,255,255,0.7); border:1px solid #e2e8f0; margin-top:8px;">
+                                <div class="progress-fill" style="width: ${aPct}%; background-color: ${h.color};"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:flex-end;">${barsHtml}</div>
+                    </div>
+                </div>`;
+            });
+            if(!html) html = '<p style="text-align:center; color:#94a3b8; font-style:italic;">Chưa có thói quen nào được định nghĩa trong tuần này.</p>';
+            document.getElementById('habit-review-content').innerHTML = html;
+        }
+        function closeHabitReview() { document.getElementById('habit-review-modal').style.display = 'none'; }
+
+
+        // --- MONTHLY PLANNER ---
+        let currentMonthDate = new Date();
+        function changeMonth(step) { currentMonthDate.setMonth(currentMonthDate.getMonth() + step); renderMonthlyGoals(); renderCalendar(); }
+        function renderMonthlyGoals() { const monthKey = `monthly_${currentMonthDate.getFullYear()}_${currentMonthDate.getMonth()}`; const mData = cloudState[monthKey] || { goals: [], days: [] }; const container = document.getElementById('monthly-goals-list'); let html = ''; for(let i = 1; i <= 3; i++) { const rowId = `monthly-goal-${i}`; const item = mData.goals[i-1] || {done: false, text: ""}; const checked = item.done ? "checked" : ""; const completed = item.done ? "completed" : ""; html += `<div class="task-row ${completed}" id="${rowId}"><input type="checkbox" class="task-done-box" id="${rowId}-done" onchange="toggleTaskDone('${rowId}', this); saveMonthly();" ${checked}><input type="text" class="task-input" id="${rowId}-text" placeholder="• Nhập mục tiêu quan trọng ${i}..." style="font-weight: 500;" value="${item.text.replace(/"/g, '&quot;')}" oninput="saveMonthly()"></div>`; } container.innerHTML = html; }
+        function renderCalendar() { const monthKey = `monthly_${currentMonthDate.getFullYear()}_${currentMonthDate.getMonth()}`; const mData = cloudState[monthKey] || { goals: [], days: [] }; const grid = document.getElementById('calendar-grid'); const monthYearDisplay = document.getElementById('month-year-display'); const year = currentMonthDate.getFullYear(); const month = currentMonthDate.getMonth(); monthYearDisplay.innerText = `Tháng ${month + 1}, ${year}`; const daysOfWeek = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']; let html = ''; daysOfWeek.forEach(d => html += `<div class="cal-day-name">${d}</div>`); const firstDayOfMonth = new Date(year, month, 1).getDay(); const emptyCellsBefore = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; const daysInMonth = new Date(year, month + 1, 0).getDate(); for(let i = 0; i < emptyCellsBefore; i++) html += `<div class="cal-cell empty"></div>`; const today = new Date(); const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year; for(let day = 1; day <= daysInMonth; day++) { const isTodayClass = (isCurrentMonth && day === today.getDate()) ? 'today' : ''; const dData = mData.days[day-1] || { icon: "📌", tag: "cal-tag-btn", events: `<div contenteditable="true" class="cal-event-input" placeholder="•" oninput="saveMonthly()"></div><div contenteditable="true" class="cal-event-input" placeholder="•" oninput="saveMonthly()"></div><div contenteditable="true" class="cal-event-input" placeholder="•" oninput="saveMonthly()"></div>` }; html += `<div class="cal-cell ${isTodayClass}"><div class="cal-cell-header"><span class="cal-date-num">${day}</span><div class="cal-tools"><button class="cal-icon-btn" onclick="cycleIcon(this)">${dData.icon}</button><button class="${dData.tag}" onclick="cycleTagColor(this)"></button></div></div><div class="cal-events">${dData.events}</div></div>`; } grid.innerHTML = html; }
+        function saveMonthly() { const monthKey = `monthly_${currentMonthDate.getFullYear()}_${currentMonthDate.getMonth()}`; const data = { goals: [], days: [] }; for(let i=1; i<=3; i++) { data.goals.push({ done: document.getElementById(`monthly-goal-${i}-done`).checked, text: document.getElementById(`monthly-goal-${i}-text`).value }); } document.querySelectorAll('.cal-cell:not(.empty)').forEach((cell) => { data.days.push({ icon: cell.querySelector('.cal-icon-btn').innerText, tag: cell.querySelector('.cal-tag-btn').className, events: cell.querySelector('.cal-events').innerHTML }); }); pushToCloud(monthKey, data); }
+        function cycleTagColor(btn) { const colors = ['', 'tag-red', 'tag-yellow', 'tag-green', 'tag-blue']; let currentClass = ''; colors.forEach(c => { if(c && btn.classList.contains(c)) currentClass = c; }); let nextIndex = (colors.indexOf(currentClass) + 1) % colors.length; colors.forEach(c => { if(c) btn.classList.remove(c); }); if(colors[nextIndex]) btn.classList.add(colors[nextIndex]); saveMonthly(); }
+        function cycleIcon(btn) { const icons = ['📌', '✈️', '🎂', '🏥', '💰', '☕', '🎉', '🏋️']; let current = btn.innerText; let nextIndex = (icons.indexOf(current) + 1) % icons.length; btn.innerText = icons[nextIndex]; if(icons[nextIndex] !== '📌') { btn.style.opacity = "1"; btn.style.transform = "scale(1.2)"; } else { btn.style.opacity = "0.3"; btn.style.transform = "scale(1)"; } saveMonthly(); }
+
+        // --- DAILY PLANNER BẤT TỬ ---
+        let currentDailyDate = new Date();
+        function getDailyDateKey() { const y = currentDailyDate.getFullYear(); const m = String(currentDailyDate.getMonth() + 1).padStart(2, '0'); const d = String(currentDailyDate.getDate()).padStart(2, '0'); return `daily_${y}-${m}-${d}`; }
+        
+        function updateDailyHeader() { 
+            const options = { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' }; 
+            document.getElementById('current-daily-date').innerText = currentDailyDate.toLocaleDateString('vi-VN', options); 
+            const currentDayNumber = currentDailyDate.getDay() === 0 ? 7 : currentDailyDate.getDay(); 
+            document.querySelectorAll('.d-nav-btn').forEach((btn, index) => { 
+                if(index + 1 === currentDayNumber) btn.classList.add('active'); 
+                else btn.classList.remove('active'); 
+            }); 
+            loadDailyData(); 
+        }
+        
+        function setDailyToDay(targetDayOfWeek) { 
+            saveDailyData(); 
+            const today = new Date(); const currentDay = today.getDay(); const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay; const monday = new Date(today); monday.setDate(today.getDate() + distanceToMonday); const newDate = new Date(monday); newDate.setDate(monday.getDate() + (targetDayOfWeek - 1)); currentDailyDate = newDate; 
+            updateDailyHeader(); 
+        }
+        
+        function renderDailyTasksDOM() { 
+            const taskList = document.getElementById('task-list'); let html = ''; const clockIcon = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition: 0.2s;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`; 
+            for(let i = 1; i <= 5; i++) { 
+                const rowId = `daily-row-${i}`; 
+                html += `<div class="task-row" id="${rowId}">
+                    <div class="daily-task-main">
+                        <input type="checkbox" class="task-done-box" id="daily-done-${i}" onchange="toggleTaskDone('${rowId}', this); saveDailyData();">
+                        <input type="text" class="task-input" id="daily-task-${i}" placeholder="• Nhập công việc ${i}..." oninput="saveDailyData()">
+                        <input type="number" class="est-pomo-input" id="daily-est-${i}" placeholder="Dự kiến" min="1" max="10" oninput="saveDailyData()">
+                        <button class="row-pomo-btn" onclick="handleTomatoClick(${i}, this)">${clockIcon}</button>
+                    </div>
+                    <div class="pomo-boxes">`; 
+                for(let j=1; j<=10; j++) { html += `<input type="checkbox" class="pomo-box" id="daily-pomo-${i}-${j}" onchange="saveDailyData()">`; } 
+                html += `</div></div>`; 
+            } 
+            taskList.innerHTML = html; 
+        }
+        
+        function loadDailyData() { 
+            const data = cloudState[getDailyDateKey()] || { tasks: [], note: "", mood: "", reviewChecked: false }; 
+            document.querySelectorAll('.mood-btn').forEach(b => { b.classList.remove('active'); if(b.innerText === data.mood) b.classList.add('active'); }); 
+            document.getElementById('daily-notes').value = data.note || ""; 
+            document.getElementById('review-check').checked = data.reviewChecked || false; 
+            
+            for(let i = 1; i <= 5; i++) { 
+                const tData = data.tasks[i-1] || {}; 
+                document.getElementById(`daily-done-${i}`).checked = tData.done || false; 
+                if(tData.done) document.getElementById(`daily-row-${i}`).classList.add('completed'); 
+                else document.getElementById(`daily-row-${i}`).classList.remove('completed'); 
+                
+                document.getElementById(`daily-task-${i}`).value = tData.text || ""; 
+                document.getElementById(`daily-est-${i}`).value = tData.est || ""; 
+                
+                const pomos = tData.pomos || []; 
+                for(let j=1; j<=10; j++) { document.getElementById(`daily-pomo-${i}-${j}`).checked = pomos[j-1] || false; } 
+            } 
+        }
+        
+        function saveDailyData() { 
+            const data = { tasks: [], note: document.getElementById('daily-notes').value, mood: "", reviewChecked: document.getElementById('review-check').checked }; 
+            const activeMoodBtn = document.querySelector('.mood-btn.active'); if (activeMoodBtn) data.mood = activeMoodBtn.innerText; 
+            for(let i = 1; i <= 5; i++) { 
+                const taskObj = { done: document.getElementById(`daily-done-${i}`).checked, text: document.getElementById(`daily-task-${i}`).value, est: document.getElementById(`daily-est-${i}`).value, pomos: [] }; 
+                for(let j=1; j<=10; j++) { taskObj.pomos.push(document.getElementById(`daily-pomo-${i}-${j}`).checked); } data.tasks.push(taskObj); 
+            } 
+            pushToCloud(getDailyDateKey(), data); 
+        }
+        
+        function selectMood(btn, moodEmoji) { document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); saveDailyData(); }
+        let timeRemaining = 25 * 60, isWorking = true, timerInterval = null, activeTaskIndex = null; 
+        function updateMiniTimerDisplay() { let mins = Math.floor(timeRemaining / 60), secs = timeRemaining % 60; document.getElementById('mini-clock').innerText = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs; }
+        function handleTomatoClick(taskIndex, btnElement) { if (activeTaskIndex === taskIndex) { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; btnElement.classList.remove('running'); document.getElementById('mini-status').innerText = "⏸️ Tạm dừng"; } else { btnElement.classList.add('running'); startCountdown(taskIndex); } return; } if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } document.querySelectorAll('.row-pomo-btn').forEach(b => b.classList.remove('running')); document.querySelectorAll('.task-row').forEach(r => r.classList.remove('focusing')); activeTaskIndex = taskIndex; isWorking = true; timeRemaining = 25 * 60; document.getElementById(`daily-row-${taskIndex}`).classList.add('focusing'); btnElement.classList.add('running'); startCountdown(taskIndex); }
+        function startCountdown(taskIndex) { 
+            const statusText = document.getElementById('mini-status'); 
+            const taskName = document.getElementById(`daily-task-${taskIndex}`).value.trim() || `Task ${taskIndex}`; 
+            statusText.innerText = isWorking ? `🎯 Làm: ${taskName}` : "⏳ Nghỉ (5p)"; 
+            updateMiniTimerDisplay();
+
+            // Lưu thời điểm bắt đầu và thời gian còn lại lúc bắt đầu để tính chính xác dù tab bị ẩn
+            const startedAt = Date.now();
+            const startingRemaining = timeRemaining;
+
+            timerInterval = setInterval(() => { 
+                const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+                timeRemaining = Math.max(0, startingRemaining - elapsed);
+                updateMiniTimerDisplay(); 
+
+                if (timeRemaining <= 0) { 
+                    clearInterval(timerInterval); 
+                    timerInterval = null; 
+                    const currentBtn = document.querySelector(`#daily-row-${taskIndex} .row-pomo-btn`); 
+                    if (isWorking) { 
+                        const rowBoxes = document.querySelectorAll(`#daily-row-${taskIndex} .pomo-box`); 
+                        for (let box of rowBoxes) { if (!box.checked) { box.checked = true; saveDailyData(); break; } } 
+                        isWorking = false; 
+                        timeRemaining = 5 * 60; 
+                        statusText.innerText = "⏳ Nghỉ (5p)"; 
+                        updateMiniTimerDisplay(); 
+                        alert(`🎉 Hết 25p! Đã tích 1 phiên cho: ${taskName}. Nghỉ 5 phút nhé.`); 
+                        startCountdown(taskIndex); 
+                    } else { 
+                        isWorking = true; 
+                        timeRemaining = 25 * 60; 
+                        if (currentBtn) currentBtn.classList.remove('running'); 
+                        statusText.innerText = "⏸️ Hết giờ nghỉ"; 
+                        updateMiniTimerDisplay(); 
+                        alert("Hết 5 phút nghỉ! Sẵn sàng quay lại công việc chưa?"); 
+                    } 
+                } 
+            }, 500); // tick 500ms để phản ứng nhanh hơn khi quay lại tab
+        }
+
+        // ==========================================
+        // FINANCE MODULE
+        // ==========================================
+        let dynamicCategories = {}; let categoryMap = {};
+        const defaultCategories = {
+            "Tiết kiệm/ đầu tư": ["Tiết kiệm", "Đầu tư"],
+            "Chi phí cố định": ["Tiền nhà", "Tiền điện", "Tiền nước", "Tiền gửi xe", "Tiền Internet", "Hoá đơn cố định khác", "Xăng, bảo dưỡng xe", "Ứng dụng trả phí", "Chợ", "Đồ gia dụng", "Sức khoẻ"],
+            "Chi phí linh hoạt": ["Mua sắm cá nhân", "Mèo", "Ăn ngoài", "Junk food", "Giải trí", "Giao tế", "Chi phí khác"]
+        };
+
+        function updateCategoryMap() { categoryMap = {}; for (let main in dynamicCategories) { dynamicCategories[main].forEach(sub => { categoryMap[sub] = main; }); } }
+        function renderCategorySelect() { const select = document.getElementById('fin-category'); let html = ''; for (let main in dynamicCategories) { html += `<optgroup label="${main}">`; dynamicCategories[main].forEach(sub => { html += `<option value="${sub}">${sub}</option>`; }); html += `</optgroup>`; } select.innerHTML = html; }
+        function renderCategorySettings() { const container = document.getElementById('category-list-container'); let html = ''; const groups = ["Tiết kiệm/ đầu tư", "Chi phí cố định", "Chi phí linh hoạt"]; groups.forEach(main => { html += `<div class="cat-list-group"><h5>${main}</h5>`; (dynamicCategories[main] || []).forEach(sub => { html += `<div class="cat-item"><span>${sub}</span><div class="cat-item-actions"><select onchange="moveCategory('${sub}', '${main}', this.value)"><option value="Tiết kiệm/ đầu tư" ${main==='Tiết kiệm/ đầu tư'?'selected':''}>Tiết kiệm</option><option value="Chi phí cố định" ${main==='Chi phí cố định'?'selected':''}>Cố định</option><option value="Chi phí linh hoạt" ${main==='Chi phí linh hoạt'?'selected':''}>Linh hoạt</option></select><button class="btn-del" onclick="deleteCategory('${sub}', '${main}')">✖</button></div></div>`; }); html += `</div>`; }); container.innerHTML = html; }
+        function addNewCategory() { const name = document.getElementById('new-cat-name').value.trim(); const group = document.getElementById('new-cat-group').value; if(!name) return; if(categoryMap[name]) { alert("Phân mục này đã tồn tại!"); return; } dynamicCategories[group].push(name); saveCategoriesToCloud(); document.getElementById('new-cat-name').value = ''; }
+        function moveCategory(sub, oldGroup, newGroup) { if(oldGroup === newGroup) return; dynamicCategories[oldGroup] = dynamicCategories[oldGroup].filter(item => item !== sub); dynamicCategories[newGroup].push(sub); saveCategoriesToCloud(); }
+        function deleteCategory(sub, main) { if(confirm(`Xoá phân mục "${sub}"? Các giao dịch cũ vẫn sẽ được giữ lại nhưng sẽ gom vào nhóm "Khác".`)) { dynamicCategories[main] = dynamicCategories[main].filter(item => item !== sub); saveCategoriesToCloud(); } }
+        function saveCategoriesToCloud() { updateCategoryMap(); renderCategorySelect(); renderCategorySettings(); recalculateFinance(); pushToCloud('finance_categories', dynamicCategories); }
+
+        let txs = []; let budgets = { savings: 5000000, fixed: 4000000, flexible: 6000000 }; let myPieChart = null;
+        
+        const d = new Date(); const yyyy = d.getFullYear(); const mm = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0'); document.getElementById('fin-date').value = `${yyyy}-${mm}-${dd}`;
+        function formatMoney(num) { return Number(num).toLocaleString('vi-VN') + 'đ'; }
+        function quickAddTx(amount, category, note) { const d = new Date(); const yyyy = d.getFullYear(); const mm = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0'); document.getElementById('fin-date').value = `${yyyy}-${mm}-${dd}`; document.getElementById('fin-amount').value = amount; document.getElementById('fin-category').value = category; document.getElementById('fin-note').value = note; addTransaction(); }
+        function loadFinanceData() { const savedCats = cloudState['finance_categories']; if(savedCats && Object.keys(savedCats).length > 0) dynamicCategories = savedCats; else dynamicCategories = JSON.parse(JSON.stringify(defaultCategories)); updateCategoryMap(); renderCategorySelect(); renderCategorySettings(); const fData = cloudState['finance_state'] || {}; txs = Array.isArray(fData.txs) ? fData.txs : []; budgets = fData.budgets || { savings: 5000000, fixed: 4000000, flexible: 6000000 }; document.getElementById('b-savings').value = (budgets.savings || 5000000) / 1000; document.getElementById('b-fixed').value = (budgets.fixed || 4000000) / 1000; document.getElementById('b-flexible').value = (budgets.flexible || 6000000) / 1000; recalculateFinance(); }
+        async function addTransaction() { const date = document.getElementById('fin-date').value; const rawAmount = parseFloat(document.getElementById('fin-amount').value); const amount = rawAmount * 1000; const subCat = document.getElementById('fin-category').value; const note = document.getElementById('fin-note').value.trim(); if(!date || isNaN(amount) || amount <= 0) { alert("Vui lòng nhập đúng ngày và số tiền hợp lệ!"); return; } const mainCat = categoryMap[subCat] || "Khác"; const newTx = { date, amount, mainCat, subCat, note }; const btn = document.getElementById('btn-submit-tx'); const originalText = btn.innerText; btn.innerText = "⏳ Đang đồng bộ..."; btn.disabled = true; try { if (!Array.isArray(txs)) txs = []; txs.push(newTx); pushToCloud('finance_state', { txs: txs, budgets: budgets }); document.getElementById('fin-amount').value = ""; document.getElementById('fin-note').value = ""; alert("🎉 Đã thêm giao dịch!"); recalculateFinance(); } catch (error) { alert("❌ Lỗi: " + error.message); console.error(error); } finally { btn.innerText = originalText; btn.disabled = false; } }
+        function saveBudgets() { budgets.savings = (parseFloat(document.getElementById('b-savings').value) || 0) * 1000; budgets.fixed = (parseFloat(document.getElementById('b-fixed').value) || 0) * 1000; budgets.flexible = (parseFloat(document.getElementById('b-flexible').value) || 0) * 1000; pushToCloud('finance_state', { txs: txs, budgets: budgets }); alert("⚙️ Đã cập nhật ngân sách!"); recalculateFinance(); }
+        
+        // HÀM TÍNH TOÁN BIỂU ĐỒ & XẾP HẠNG
+        const pieColors = [ '#fca5a5', '#93c5fd', '#86efac', '#fde047', '#c084fc', '#fdba74', '#5eead4', '#cbd5e1', '#f472b6', '#be123c', '#0d9488', '#fbbf24', '#a7f3d0', '#6366f1', '#ec4899', '#f97316', '#3b82f6', '#10b981', '#ef4444', '#84cc16', '#64748b' ];
+
+        function recalculateFinance() {
+            const today = new Date(); const currentYear = today.getFullYear(); const currentMonth = today.getMonth(); const dayOfWeek = today.getDay(); const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; const monday = new Date(today); monday.setDate(today.getDate() + distanceToMonday); monday.setHours(0,0,0,0); const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23,59,59,999);
+            const todayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            let weekFlexSum = 0, monthSavingsSum = 0, monthFixedSum = 0, monthFlexSum = 0;
+            let subCatData = {}; Object.keys(categoryMap).forEach(key => subCatData[key] = 0);
+            let weekFlexByGroup = {}; // { subCat: [{ note, amount }] }
+            
+            let dailyHtml = `<h4 style="margin:0 0 15px 0; color:#334155;">Khoản chi hôm nay (${String(today.getDate()).padStart(2, '0')}/${String(currentMonth + 1).padStart(2, '0')})</h4><div style="overflow-y:auto; max-height:350px; padding-right:5px;">`;
+            let dailyTotal = 0; let hasDaily = false;
+
+            if (Array.isArray(txs)) {
+                const sortedTxs = [...txs].reverse();
+                sortedTxs.forEach(tx => { 
+                    if (tx.date === todayStr) {
+                        dailyTotal += tx.amount; hasDaily = true;
+                        dailyHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#f8fafc; border-radius:8px; margin-bottom:8px; border:1px solid #e2e8f0;">
+                            <div><strong style="color:#1e293b; font-size:14px;">${tx.subCat}</strong><br><span style="color:#64748b; font-size:12px;">${tx.note || '(Không ghi chú)'}</span></div>
+                            <div style="font-weight:bold; color:#e11d48; font-size:15px;">-${formatMoney(tx.amount)}</div>
+                        </div>`;
+                    }
+                    const parts = tx.date.split('-');
+                    if (parts.length === 3) {
+                        const txYear = parseInt(parts[0], 10); const txMonth = parseInt(parts[1], 10) - 1; const txDateObj = new Date(txYear, txMonth, parseInt(parts[2], 10));
+                        const currentMainCat = categoryMap[tx.subCat] || tx.mainCat;
+                        if(txDateObj >= monday && txDateObj <= sunday && currentMainCat === "Chi phí linh hoạt") { 
+                            weekFlexSum += tx.amount;
+                            if(!weekFlexByGroup[tx.subCat]) weekFlexByGroup[tx.subCat] = [];
+                            weekFlexByGroup[tx.subCat].push({ note: tx.note, amount: tx.amount });
+                        }
+                        if(txYear === currentYear && txMonth === currentMonth) { 
+                            if(currentMainCat === "Tiết kiệm/ đầu tư") monthSavingsSum += tx.amount; 
+                            if(currentMainCat === "Chi phí cố định") monthFixedSum += tx.amount; 
+                            if(currentMainCat === "Chi phí linh hoạt") monthFlexSum += tx.amount; 
+                            if(subCatData[tx.subCat] !== undefined) { subCatData[tx.subCat] += tx.amount; } else { subCatData[tx.subCat] = tx.amount; }
+                        } 
+                    }
+                });
+            }
+            
+            if(!hasDaily) dailyHtml += `<div style="text-align:center; color:#94a3b8; padding:20px; font-size:13px; font-style:italic;">Chưa có chi tiêu nào được ghi nhận hôm nay.</div>`;
+            dailyHtml += `</div>`;
+            if(hasDaily) dailyHtml += `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; padding-top:15px; border-top:2px dashed #e2e8f0; font-size:16px; font-weight:bold; color:#1e293b;"><span>Tổng cộng:</span><span style="color:#e11d48;">-${formatMoney(dailyTotal)}</span></div>`;
+            document.getElementById('fin-day-view').innerHTML = dailyHtml;
+
+            document.getElementById('week-flex-total').innerText = formatMoney(weekFlexSum);
+            const weekBudget = budgets.flexible || 6000000;
+            const weekStatBox = document.getElementById('week-stat-box');
+            if (weekFlexSum > weekBudget) { weekStatBox.style.backgroundColor = '#fee2e2'; weekStatBox.style.borderColor = '#fca5a5'; weekStatBox.style.color = '#991b1b'; } 
+            else if (weekFlexSum > weekBudget * 0.75) { weekStatBox.style.backgroundColor = '#fef9c3'; weekStatBox.style.borderColor = '#fde047'; weekStatBox.style.color = '#854d0e'; } 
+            else { weekStatBox.style.backgroundColor = '#f8fafc'; weekStatBox.style.borderColor = '#cbd5e1'; weekStatBox.style.color = 'inherit'; }
+
+            // Progress bar so với ngân sách linh hoạt
+            const weekPct = weekBudget > 0 ? Math.min((weekFlexSum / weekBudget) * 100, 100) : 0;
+            const barColor = weekFlexSum > weekBudget ? '#f87171' : weekFlexSum > weekBudget * 0.75 ? '#fbbf24' : '#4ade80';
+            document.getElementById('week-budget-bar').innerHTML = `
+                <div style="font-size:12px; color:#64748b; margin-bottom:6px;">So với ngân sách linh hoạt tháng</div>
+                <div style="font-size:13px; font-weight:bold; color:#1e293b; margin-bottom:8px;">${formatMoney(weekFlexSum)} / ${formatMoney(weekBudget)}</div>
+                <div class="progress-track"><div class="progress-fill" style="width:${weekPct.toFixed(1)}%; background:${barColor};"></div></div>
+                <div style="font-size:11px; color:#94a3b8; margin-top:6px;">${weekPct.toFixed(1)}% ngân sách đã dùng</div>`;
+
+            // Cột phải: danh sách theo nhóm danh mục
+            let breakdownHtml = '';
+            const groups = Object.entries(weekFlexByGroup).sort((a,b) => b[1].reduce((s,t)=>s+t.amount,0) - a[1].reduce((s,t)=>s+t.amount,0));
+            if (groups.length === 0) {
+                breakdownHtml = '<div style="color:#94a3b8; font-size:13px; font-style:italic; text-align:center; padding:20px 0;">Chưa có chi tiêu linh hoạt nào trong tuần này.</div>';
+            } else {
+                groups.forEach(([subCat, items]) => {
+                    const groupTotal = items.reduce((s, t) => s + t.amount, 0);
+                    breakdownHtml += `<div style="margin-bottom:14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <span style="font-size:13px; font-weight:bold; color:#334155;">${subCat}</span>
+                            <span style="font-size:13px; font-weight:bold; color:#e11d48;">-${formatMoney(groupTotal)}</span>
+                        </div>`;
+                    items.forEach(tx => {
+                        breakdownHtml += `<div style="display:flex; justify-content:space-between; padding:5px 8px; background:#f8fafc; border-radius:6px; margin-bottom:4px; font-size:12px; border-left:3px solid #e2e8f0;">
+                            <span style="color:#64748b;">${tx.note || '(Không ghi chú)'}</span>
+                            <span style="color:#1e293b; font-weight:600;">-${formatMoney(tx.amount)}</span>
+                        </div>`;
+                    });
+                    breakdownHtml += `</div>`;
+                });
+            }
+            document.getElementById('week-flex-breakdown').innerHTML = breakdownHtml;
+            
+            const progressContainer = document.getElementById('month-progress-container'); 
+            const items = [ { name: "📈 Tiết kiệm / Đầu tư", actual: monthSavingsSum, budget: budgets.savings }, { name: "🏠 Chi phí cố định", actual: monthFixedSum, budget: budgets.fixed }, { name: "🛍️ Chi phí linh hoạt", actual: monthFlexSum, budget: budgets.flexible } ];
+            let progressHtml = ''; 
+            items.forEach(item => { 
+                const percentageRaw = item.budget > 0 ? (item.actual / item.budget) * 100 : 0;
+                const percentageBound = Math.min(percentageRaw, 100);
+                const isOver = (item.name.includes("linh hoạt") || item.name.includes("cố định")) && (item.actual > item.budget);
+                const barColor = isOver ? "#f87171" : "#93c5fd"; const badgeBg = isOver ? "#fef2f2" : "#eff6ff"; const badgeColor = isOver ? "#e11d48" : "#2563eb";
+                const pctStr = percentageRaw.toFixed(1).replace('.0', '') + '%';
+                progressHtml += `<div class="budget-progress-item"><div class="budget-labels"><span style="color:#475569;">${item.name}</span><span style="color:#1e293b; display:flex; align-items:center;">${formatMoney(item.actual)} / ${formatMoney(item.budget)}<span style="background: ${badgeBg}; color: ${badgeColor}; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px; font-weight: bold; min-width: 36px; text-align: center; display: inline-block;">${pctStr}</span></span></div><div class="progress-track"><div class="progress-fill" style="width: ${percentageBound}%; background-color: ${barColor};"></div></div></div>`; 
+            }); 
+            progressContainer.innerHTML = progressHtml; 
+            
+            window.currentSubCatData = subCatData; 
+            if(document.getElementById('fin-chart-view').classList.contains('active')) { updatePieChart(); }
+        }
+
+        function updatePieChart() { 
+            const ctx = document.getElementById('finPieChart').getContext('2d'); 
+            
+            // XỬ LÝ LỌC VÀ SẮP XẾP DỮ LIỆU
+            let filteredData = [];
+            if (window.currentSubCatData) {
+                for (const [key, val] of Object.entries(window.currentSubCatData)) {
+                    if (val > 0) { filteredData.push({ label: key, value: val }); }
+                }
+            }
+            
+            filteredData.sort((a, b) => b.value - a.value); // Xếp từ cao xuống thấp
+
+            const filteredLabels = filteredData.map(d => d.label); 
+            const filteredValues = filteredData.map(d => d.value);
+            const isAllZero = filteredValues.length === 0;
+
+            // RENDER DANH SÁCH BÊN CẠNH BIỂU ĐỒ
+            let legendHtml = '';
+            if (isAllZero) {
+                legendHtml = '<div style="text-align:center; color:#94a3b8; font-size:13px; font-style:italic; padding:20px;">Chưa có chi tiêu phát sinh trong tháng</div>';
+            } else {
+                filteredData.forEach((d, i) => {
+                    const color = pieColors[i % pieColors.length];
+                    legendHtml += `
+                    <div class="fin-legend-item" style="border-left-color: ${color};">
+                        <span style="color:#334155; font-weight:500;">${d.label}</span>
+                        <span style="color:#e11d48; font-weight:bold;">${formatMoney(d.value)}</span>
+                    </div>`;
+                });
+            }
+            document.getElementById('fin-legend-list').innerHTML = legendHtml;
+
+            if (myPieChart) myPieChart.destroy(); 
+
+            myPieChart = new Chart(ctx, { 
+                type: 'pie', 
+                data: { 
+                    labels: isAllZero ? ["Chưa phát sinh chi tiêu"] : filteredLabels, 
+                    datasets: [{ 
+                        data: isAllZero ? [1] : filteredValues, 
+                        backgroundColor: isAllZero ? ['#e2e8f0'] : pieColors.slice(0, filteredValues.length), 
+                        borderWidth: 1, borderColor: '#ffffff' 
+                    }] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    plugins: { 
+                        legend: { display: false }, // Ẩn legend mặc định
+                        tooltip: { callbacks: { label: function(context) { if(isAllZero) return ' Chưa có số liệu phát sinh'; return ' ' + context.label + ': ' + formatMoney(context.raw); } } } 
+                    } 
+                } 
+            }); 
+        }
+
+        // Trước khi rời trang: gửi ngay các key còn "dirty" để không mất dữ liệu trong khoảng debounce
+        window.addEventListener('beforeunload', function() {
+            try {
+                const meta = JSON.parse(localStorage.getItem('offline_meta')) || {};
+                for (let key in meta) {
+                    if (meta[key] === 'dirty' && cloudState[key] !== undefined) {
+                        const payload = JSON.stringify({ action: "saveState", key: key, data: cloudState[key] });
+                        if (navigator.sendBeacon) {
+                            navigator.sendBeacon(CLOUD_WEBHOOK_URL, new Blob([payload], { type: 'text/plain;charset=utf-8' }));
+                        }
+                    }
+                }
+            } catch(e) {}
+        });
+
+        window.onload = initCloudApp;
+    </script>
+</body>
+</html>
