@@ -528,7 +528,7 @@
         function switchTab(tabId) { document.querySelectorAll('.planner-section').forEach(s => s.classList.remove('active')); document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active')); document.getElementById(tabId).classList.add('active'); event.currentTarget.classList.add('active'); if(tabId === 'finance') { recalculateFinance(); } }
         function switchFinSubTab(side, targetId, btn) { const col = btn.closest('.finance-col'); col.querySelectorAll('.fin-tab-btn').forEach(b => b.classList.remove('active')); col.querySelectorAll('.fin-sub-section').forEach(s => s.classList.remove('active')); btn.classList.add('active'); document.getElementById(targetId).classList.add('active'); if(targetId === 'fin-chart-view') { updatePieChart(); } }
 
-        const CLOUD_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzCHiWrF8qY__EAkbD-PBhp2ISvFJv28Whs3ZPdNBsSGcQApMjy-HeKmnbiXy_UpXAV/exec";
+        const CLOUD_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz0EOwK-peWCcyXEpHCI5MJ5KH_JEcunA18PFkH4TPAAv9jjx7OHqfwfViwG7Wxu4uT/exec";
         
         let cloudState = {}; 
         let syncTimers = {};
@@ -582,26 +582,28 @@
                 cloudState = JSON.parse(localStorage.getItem('offline_backup')) || {};
             }
 
-            // Hợp nhất dữ liệu: CHỈ ưu tiên bản local cho các key CHƯA kịp đồng bộ lên cloud (còn 'dirty').
-            // Với các key đã đồng bộ, luôn tin tưởng cloud để nhiều thiết bị thấy dữ liệu giống nhau.
+            // Hợp nhất dữ liệu: với MỖI key, giữ bản có nhiều nội dung thực hơn giữa cloud và local.
+            // Cách này đảm bảo: (a) dữ liệu vừa nhập trên máy này không bị bản cloud cũ/rỗng ghi đè;
+            // (b) khi cloud có bản mới hơn (từ máy khác) và local trống thì vẫn nhận được.
             try {
                 const localBackup = JSON.parse(localStorage.getItem('offline_backup')) || {};
-                const localMeta = JSON.parse(localStorage.getItem('offline_meta')) || {};
                 if (cloudLoaded) {
                     for (let key in localBackup) {
-                        if (localMeta[key] === 'dirty') {
-                            // Bản local chưa lên cloud → giữ lại, nhưng chỉ khi nó có nội dung thực (tránh bản rỗng đè bản cloud)
+                        if (key in cloudState) {
                             cloudState[key] = mergePreferNonEmpty(cloudState[key], localBackup[key]);
+                        } else {
+                            cloudState[key] = localBackup[key];
                         }
-                        // key không dirty → dùng nguyên bản cloud (đã gán ở trên), không đụng tới
                     }
                 } else {
-                    // Không tải được cloud (offline) → dùng toàn bộ backup local
                     for (let key in localBackup) {
                         if (!(key in cloudState)) cloudState[key] = localBackup[key];
                     }
                 }
             } catch(mergeErr) { console.warn("Không merge được backup cục bộ:", mergeErr); }
+
+            // Dọn key chẩn đoán nếu còn sót
+            if (cloudState['diagnostic_test']) { delete cloudState['diagnostic_test']; }
             
             const safe = (label, fn) => { try { fn(); } catch(e) { console.error("Lỗi " + label + ":", e); } };
             safe('updateYearProgress', updateYearProgress);
