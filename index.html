@@ -291,15 +291,11 @@
             /* DAILY FIX */
             .daily-week-nav { gap: 4px; margin-bottom: 15px; } .d-nav-btn { font-size: 12px; padding: 10px 0; }
             .daily-header-flex { justify-content: center; } .date-display { font-size: 15px; width: 100%; text-align: center; margin-bottom: 5px;} .mood-tracker { width: 100%; justify-content: center; margin-top: 10px; }
-            /* Daily task rows: main line + pomo boxes xuống dưới */
-            #task-list .task-row { flex-direction: column; align-items: stretch; gap: 4px; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: transparent; border-radius: 0; margin-bottom: 0; }
-            #task-list .daily-task-main { display: flex; align-items: center; gap: 8px; width: 100%; }
-            #task-list .task-input { flex: 1; min-width: 0; padding: 2px 4px; }
-            .est-pomo-input { margin-left: 0; width: 55px; flex-shrink: 0; }
-            #task-list .pomo-boxes { gap: 5px; padding-left: 30px; }  /* 22px done-box + 8px gap */
-            /* Matrix + Goals: giữ checkbox và text cùng hàng */
-            .matrix-box .task-row, .goal-card .task-row { flex-wrap: nowrap; align-items: center; gap: 8px; background: transparent; padding: 4px 6px; }
-            .matrix-box .task-input, .goal-card .task-input { min-width: 0; flex: 1; font-size: 13px; padding: 2px 4px; border-bottom: none; margin: 0; }
+            /* DAILY TASK CARD trên mobile: nội dung 1 hàng, 10 ô checkbox xuống hàng dưới */
+            #task-list .dtask-card, .special-box .dtask-card { flex-wrap: wrap; }
+            #task-list .dtask-body, .special-box .dtask-body { max-width: none; }
+            #task-list .dtask-boxes, .special-box .dtask-boxes { width: 100%; margin-left: 0; margin-top: 6px; padding-left: 30px; flex-wrap: wrap; box-sizing: border-box; }
+            .dtask-pomo { width: 20px; height: 20px; }
             .matrix-box .task-done-box, .goal-card .task-done-box { flex-shrink: 0; width: 20px; height: 20px; margin-right: 6px; }
             
             .calendar-header-bar { flex-direction: column; gap: 10px; } 
