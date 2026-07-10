@@ -33,6 +33,39 @@
         .habit-box { width: 28px; height: 28px; margin: 0; cursor: pointer; }
 
         .daily-task-main { display: flex; align-items: center; flex: 1; gap: 8px; min-width: 0; }
+
+        /* DAILY TASK CARDS (giống habit) */
+        .dtask-card { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 9px; margin-bottom: 8px; border: 1px solid rgba(0,0,0,0.05); border-left: 4px solid #94a3b8; transition: 0.2s; background: #f8fafc; min-width: 0; box-sizing: border-box; }
+        .dtask-card.completed { opacity: 0.55; }
+        .dtask-card.completed .dtask-title { text-decoration: line-through; color: #94a3b8; }
+        .dtask-drag { font-size: 15px; cursor: grab; opacity: 0.5; flex-shrink: 0; }
+        .dtask-drag:hover { opacity: 1; }
+        .dtask-check { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; }
+        .dtask-body { min-width: 110px; max-width: 220px; cursor: pointer; display: flex; align-items: center; gap: 7px; padding: 3px 4px; border-radius: 6px; transition: 0.15s; flex-shrink: 0; }
+        .dtask-body:hover { background: rgba(255,255,255,0.6); }
+        .dtask-title { min-width: 0; font-size: 16px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dtask-card.dragging { opacity: 0.4; }
+        .dtask-boxes { display: flex; gap: 6px; flex-wrap: nowrap; margin-left: auto; flex-shrink: 0; }
+        .dtask-pomo { width: 18px; height: 18px; margin: 0; cursor: pointer; flex-shrink: 0; }
+
+        /* KHUNG ĐẶC BIỆT: Việc quan trọng nhất + Thể dục */
+        .special-box { border-radius: 9px; margin-bottom: 8px; padding: 9px; min-height: 50px; display: flex; align-items: center; box-sizing: border-box; transition: 0.2s; }
+        .mit-box { border: 2.5px dashed #ef4444; background: #fef2f2; }
+        .mit-box.drag-hover { background: #fee2e2; border-color: #dc2626; }
+        .ex-box { border: 2.5px dashed #eab308; background: #fefce8; cursor: pointer; }
+        .ex-box:hover { background: #fef9c3; }
+        .special-placeholder { width: 100%; text-align: center; font-size: 13px; font-weight: bold; color: #94a3b8; line-height: 1.4; pointer-events: none; }
+        .mit-box .special-placeholder { color: #f87171; }
+        .ex-box .special-placeholder { color: #ca8a04; }
+        /* Lớp bọc nội dung chiếm toàn bộ chiều rộng khung */
+        #mit-content, #ex-content { width: 100%; position: relative; }
+        /* Thẻ nằm trong khung đặc biệt: full width, bỏ margin */
+        .special-box .dtask-card { width: 100%; margin-bottom: 0; box-sizing: border-box; }
+        /* Thẻ thể dục: chữ căn giữa, không có ô nhỏ */
+        .ex-card .dtask-body { flex: 1; max-width: none; }
+        .ex-card .dtask-title { flex: none; }
+        /* Thẻ trong khung MIT: nội dung giãn để lấp đầy, ô nhỏ vẫn dạt phải */
+        .mit-box .dtask-body { flex: 1; max-width: none; }
         .task-row { display: flex; align-items: center; margin-bottom: 12px; background: #f8fafc; padding: 8px 12px; border-radius: 8px; transition: 0.2s; }
         .task-row.completed { background: #f1f5f9; opacity: 0.6; }
         .task-row.completed .task-input { text-decoration: line-through; color: #94a3b8; }
@@ -67,23 +100,26 @@
         .fmt-picker { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #64748b; font-weight: 500; }
         .fmt-picker input[type="color"] { width: 26px; height: 26px; padding: 0; border: 1px solid #cbd5e1; cursor: pointer; border-radius: 4px; background: none; }
         .calendar-grid-wrapper { width: 100%; box-sizing: border-box; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #e2e8f0; gap: 1px; width: 100%; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #e2e8f0; gap: 1px; width: 100%; position: relative; }
+        .cal-events-layer { position: absolute; z-index: 5; pointer-events: none; }
         .cal-day-name { background: #f1f5f9; text-align: center; padding: 10px 0; font-weight: bold; color: #64748b; font-size: 14px; }
-        .cal-cell { background: white; min-height: 120px; padding: 8px; display: flex; flex-direction: column; transition: 0.2s; box-sizing: border-box; overflow: hidden; }
-        .cal-cell:hover { background: #fafafa; } .cal-cell.empty { background: #f8fafc; } 
+        .cal-cell { background: white; min-height: 120px; padding: 6px; display: flex; flex-direction: column; transition: 0.2s; box-sizing: border-box; overflow: visible; cursor: pointer; position: relative; user-select: none; }
+        .cal-cell.empty { background: #f8fafc; cursor: default; }
         .cal-cell.today .cal-date-num { background: var(--primary); color: white; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; }
-        .cal-cell-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .cal-cell.drag-selecting { background: #eff6ff; }
+        .cal-cell-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; pointer-events: none; }
         .cal-date-num { font-weight: bold; color: #475569; font-size: 14px; }
-        .cal-tools { display: flex; align-items: center; gap: 6px; }
-        .cal-icon-btn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 0; opacity: 0.3; transition: 0.2s; }
-        .cal-icon-btn:hover { opacity: 1; transform: scale(1.2); }
-        .cal-tag-btn { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #cbd5e1; background: transparent; cursor: pointer; transition: 0.2s; padding: 0; }
-        .cal-tag-btn.tag-red { background: #fca5a5; border-color: #fca5a5; } .cal-tag-btn.tag-green { background: #86efac; border-color: #86efac; } .cal-tag-btn.tag-blue { background: #93c5fd; border-color: #93c5fd; } .cal-tag-btn.tag-yellow { background: #fde047; border-color: #fde047; }
-        .cal-events { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
-        .cal-event-input { border: 1px solid transparent; font-size: 13px; padding: 4px 6px; border-radius: 4px; outline: none; color: #475569; min-height: 18px; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; display: block; width: 100%; box-sizing: border-box; }
-        .cal-event-input:empty:before { content: attr(placeholder); color: #cbd5e1; pointer-events: none; }
-        .cal-event-input:hover { background: #f8fafc; border-color: #e2e8f0; }
-        .cal-event-input:focus { background: #eff6ff; border-color: var(--primary); white-space: normal; overflow: visible; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); z-index: 10; position: relative; }
+
+        /* Thanh event */
+        .cal-week-row { display: contents; }
+        .cal-event-bar { position: absolute; height: 20px; border-radius: 10px; font-size: 11px; font-weight: 600; color: #fff; padding: 0 8px; display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; pointer-events: auto; box-shadow: 0 1px 2px rgba(0,0,0,0.15); transition: filter 0.15s; box-sizing: border-box; }
+        .cal-event-bar:hover { filter: brightness(1.08); }
+        .cal-add-event-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(37,99,235,0.2); }
+        .cal-add-event-btn:hover { background: #1d4ed8; transform: translateY(-1px); }
+
+        /* Modal chỉnh sửa event */
+        #cal-event-modal { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:10003; justify-content:center; align-items:center; backdrop-filter:blur(4px); }
+        #cal-event-modal .modal-inner { background:white; padding:24px; border-radius:16px; width:90%; max-width:380px; box-shadow:0 10px 25px rgba(0,0,0,0.15); }
 
         /* WEEKLY PLANNER CSS */
         .weekly-header { display: flex; justify-content: center; align-items: center; padding-bottom: 0; margin-bottom: 20px; border-bottom: none; }
@@ -325,6 +361,90 @@
         </div>
     </div>
 
+    <div id="cal-event-modal" onclick="if(event.target===this) closeCalEvent()">
+        <div class="modal-inner">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">
+                <h3 style="margin:0; color:var(--primary);">📅 Sự kiện</h3>
+                <button onclick="closeCalEvent()" style="border:none; background:#f1f5f9; color:#64748b; width:30px; height:30px; border-radius:50%; font-size:14px; cursor:pointer; font-weight:bold;">✖</button>
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">Nội dung</label>
+                <input id="cal-event-text" type="text" placeholder="Nhập nội dung sự kiện..." style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:15px; font-weight:600; color:#1e293b; outline:none; box-sizing:border-box; font-family:inherit;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+            <div style="margin-bottom:20px; display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">Từ ngày</label>
+                    <input id="cal-event-start" type="date" style="width:100%; padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; color:#1e293b; outline:none; box-sizing:border-box; font-family:inherit;">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">Tới ngày</label>
+                    <input id="cal-event-end" type="date" style="width:100%; padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; color:#1e293b; outline:none; box-sizing:border-box; font-family:inherit;">
+                </div>
+            </div>
+            <div style="margin-bottom:24px;">
+                <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:12px;">Màu sắc</label>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <div id="cal-event-colors" style="display:contents;"></div>
+                    <div style="position:relative; width:34px; height:34px; flex-shrink:0;" title="Màu tuỳ chỉnh">
+                        <input type="color" id="cal-event-custompicker" value="#3b82f6"
+                            style="position:absolute; opacity:0; width:34px; height:34px; cursor:pointer; top:0; left:0; border:none; padding:0;"
+                            oninput="document.querySelectorAll('.cal-event-swatch').forEach(s=>s.style.borderColor='transparent'); document.getElementById('cal-picker-circle').style.background=this.value;">
+                        <div id="cal-picker-circle" style="width:34px; height:34px; border-radius:50%; background:#e2e8f0; border:3px solid transparent; display:flex; align-items:center; justify-content:center; pointer-events:none; box-shadow:0 1px 3px rgba(0,0,0,0.15);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#64748b;"><path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41-6.6 6.6A2 2 0 0 0 5 16v3h3a2 2 0 0 0 1.42-.59l6.6-6.6 1.41 1.42 1.42-1.42-1.42-1.41 3.12-3.12a1 1 0 0 0 0-1.65zM8 17H7v-1l6.59-6.59 1 1z"/></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="saveCalEvent()" style="flex:1; background:var(--primary); color:white; border:none; padding:11px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">💾 Lưu</button>
+                <button onclick="deleteCalEvent()" style="background:#fee2e2; color:#ef4444; border:none; padding:11px 14px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">🗑️</button>
+                <button onclick="closeCalEvent()" style="flex:1; background:#f1f5f9; color:#64748b; border:none; padding:11px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">Huỷ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dtask-modal" onclick="if(event.target===this) closeDtaskEdit()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:10003; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+        <div style="background:white; padding:24px; border-radius:16px; width:90%; max-width:380px; box-shadow:0 10px 25px rgba(0,0,0,0.15);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">
+                <h3 style="margin:0; color:var(--primary);">✏️ Chỉnh sửa task</h3>
+                <button onclick="closeDtaskEdit()" style="border:none; background:#f1f5f9; color:#64748b; width:30px; height:30px; border-radius:50%; font-size:14px; cursor:pointer; font-weight:bold;">✖</button>
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">Nội dung</label>
+                <input id="dtask-text" type="text" placeholder="Nhập nội dung task..." style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:15px; font-weight:600; color:#1e293b; outline:none; box-sizing:border-box; font-family:inherit;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+            <div style="margin-bottom:24px;">
+                <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:12px;">Màu sắc</label>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <div id="dtask-colors" style="display:contents;"></div>
+                    <div style="position:relative; width:34px; height:34px; flex-shrink:0;" title="Màu tuỳ chỉnh">
+                        <input type="color" id="dtask-custompicker" value="#94a3b8"
+                            style="position:absolute; opacity:0; width:34px; height:34px; cursor:pointer; top:0; left:0; border:none; padding:0;"
+                            oninput="document.querySelectorAll('.dtask-swatch').forEach(s=>s.style.borderColor='transparent'); document.getElementById('dtask-picker-circle').style.background=this.value;">
+                        <div id="dtask-picker-circle" style="width:34px; height:34px; border-radius:50%; background:#e2e8f0; border:3px solid transparent; display:flex; align-items:center; justify-content:center; pointer-events:none; box-shadow:0 1px 3px rgba(0,0,0,0.15);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#64748b;"><path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41-6.6 6.6A2 2 0 0 0 5 16v3h3a2 2 0 0 0 1.42-.59l6.6-6.6 1.41 1.42 1.42-1.42-1.42-1.41 3.12-3.12a1 1 0 0 0 0-1.65zM8 17H7v-1l6.59-6.59 1 1z"/></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="saveDtaskEdit()" style="flex:1; background:var(--primary); color:white; border:none; padding:11px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">💾 Lưu</button>
+                <button onclick="deleteDtask()" style="background:#fee2e2; color:#ef4444; border:none; padding:11px 14px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">🗑️</button>
+                <button onclick="closeDtaskEdit()" style="flex:1; background:#f1f5f9; color:#64748b; border:none; padding:11px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">Huỷ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ex-picker-modal" onclick="if(event.target===this) closeExercisePicker()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:10003; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+        <div style="background:white; padding:24px; border-radius:16px; width:90%; max-width:380px; box-shadow:0 10px 25px rgba(0,0,0,0.15);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">
+                <h3 style="margin:0; color:#ca8a04;">🏃 Chọn bài thể dục</h3>
+                <button onclick="closeExercisePicker()" style="border:none; background:#f1f5f9; color:#64748b; width:30px; height:30px; border-radius:50%; font-size:14px; cursor:pointer; font-weight:bold;">✖</button>
+            </div>
+            <div id="ex-options" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+    </div>
+
     <div class="sidebar">
         <h2>📔 Self Planner</h2>
         <button class="menu-btn" onclick="switchTab('yearly')">🎯 Goals</button>
@@ -360,11 +480,8 @@
             <div class="calendar-container">
                 <div class="calendar-header-bar"><button class="cal-nav-btn" onclick="changeMonth(-1)">◀ Tháng trước</button><h3 id="month-year-display">Tháng ..., ...</h3><button class="cal-nav-btn" onclick="changeMonth(1)">Tháng sau ▶</button></div>
                 <div class="cal-toolbar">
-                    <span style="font-size: 13px; color: #94a3b8; font-style: italic; margin-right: 5px;">Bôi đen chữ để định dạng:</span>
-                    <button class="fmt-btn" onclick="formatText('bold')" title="In đậm"><b>B</b></button>
-                    <button class="fmt-btn" onclick="formatText('italic')" title="In nghiêng"><i>I</i></button>
-                    <label class="fmt-picker" title="Đổi màu chữ">Màu chữ:<input type="color" value="#dc2626" onchange="formatText('foreColor', this.value)"></label>
-                    <label class="fmt-picker" title="Đổi màu nền">Nền (Highlight):<input type="color" value="#fef08a" onchange="formatText('hiliteColor', this.value)"></label>
+                    <button class="cal-add-event-btn" onclick="openCalEventNew()">➕ Thêm sự kiện</button>
+                    <span style="font-size: 12px; color: #94a3b8; font-style: italic;">Mẹo: Kéo giữ chuột qua nhiều ngày hoặc bấm 1 ô ngày để tạo nhanh.</span>
                 </div>
                 <div class="calendar-grid-wrapper">
                     <div class="calendar-grid" id="calendar-grid"></div>
@@ -416,7 +533,6 @@
             
             <div class="daily-header-flex">
                 <div class="date-display" id="current-daily-date">Thứ ..., ngày ...</div>
-                <div class="mini-timer"><span id="mini-clock">25:00</span><span id="mini-status">Sẵn sàng</span></div>
                 <div class="mood-tracker">
                     <button class="mood-btn" onclick="selectMood(this, '😫')">😫</button>
                     <button class="mood-btn" onclick="selectMood(this, '😐')">😐</button>
@@ -424,7 +540,21 @@
                     <button class="mood-btn" onclick="selectMood(this, '🤩')">🤩</button>
                 </div>
             </div>
-            <div class="task-container"><h3>TASKS OF THE DAY</h3><div id="task-list"></div></div>
+            <div class="task-container">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <h3 style="margin:0;">TASKS OF THE DAY</h3>
+                    <button class="cal-add-event-btn" onclick="addDailyTask()">➕ Thêm task</button>
+                </div>
+                <!-- Khung việc quan trọng nhất -->
+                <div id="mit-box" class="special-box mit-box" ondragover="mitDragOver(event)" ondragleave="mitDragLeave(event)" ondrop="mitDrop(event)">
+                    <div id="mit-content" class="special-placeholder">🎯 VIỆC QUAN TRỌNG NHẤT<br><span style="font-size:12px; font-weight:normal; opacity:0.7;">(Kéo một task vào đây)</span></div>
+                </div>
+                <!-- Khung thể dục -->
+                <div id="ex-box" class="special-box ex-box" onclick="openExercisePicker()">
+                    <div id="ex-content" class="special-placeholder">🏃 THỂ DỤC<br><span style="font-size:12px; font-weight:normal; opacity:0.7;">(Bấm để chọn)</span></div>
+                </div>
+                <div id="task-list"></div>
+            </div>
             <textarea class="notes-area" id="daily-notes" rows="4" placeholder="Viết ghi chú ngày hôm nay vào đây..." oninput="saveDailyData()"></textarea>
             <div class="footer-row"><label for="review-check">Review Weekly Planner</label><input type="checkbox" id="review-check" onchange="saveDailyData()"></div>
         </div>
@@ -525,7 +655,7 @@
     </div>
 
     <script>
-        function switchTab(tabId) { document.querySelectorAll('.planner-section').forEach(s => s.classList.remove('active')); document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active')); document.getElementById(tabId).classList.add('active'); event.currentTarget.classList.add('active'); if(tabId === 'finance') { recalculateFinance(); } }
+        function switchTab(tabId) { document.querySelectorAll('.planner-section').forEach(s => s.classList.remove('active')); document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active')); document.getElementById(tabId).classList.add('active'); event.currentTarget.classList.add('active'); if(tabId === 'finance') { recalculateFinance(); } if(tabId === 'calendar') { renderCalendar(); } }
         function switchFinSubTab(side, targetId, btn) { const col = btn.closest('.finance-col'); col.querySelectorAll('.fin-tab-btn').forEach(b => b.classList.remove('active')); col.querySelectorAll('.fin-sub-section').forEach(s => s.classList.remove('active')); btn.classList.add('active'); document.getElementById(targetId).classList.add('active'); if(targetId === 'fin-chart-view') { updatePieChart(); } }
 
         const CLOUD_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz0EOwK-peWCcyXEpHCI5MJ5KH_JEcunA18PFkH4TPAAv9jjx7OHqfwfViwG7Wxu4uT/exec";
@@ -678,7 +808,7 @@
         }
 
         function toggleTaskDone(rowId, checkbox) { const row = document.getElementById(rowId); if (checkbox.checked) row.classList.add('completed'); else row.classList.remove('completed'); }
-        function formatText(command, value = null) { document.execCommand(command, false, value); saveMonthly(); }
+        function formatText(command, value = null) { /* deprecated - calendar dùng event bars */ }
 
         // --- YEARLY GOALS ---
         function updateYearProgress() { const now = new Date(); const year = now.getFullYear(); const start = new Date(year, 0, 1); const end = new Date(year + 1, 0, 1); const percent = ((now - start) / (end - start)) * 100; const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24)); document.getElementById('current-year-display').innerText = year; document.getElementById('year-percent-text').innerText = percent.toFixed(1) + '%'; document.getElementById('year-days-left').innerText = `Còn lại ${daysLeft} ngày`; document.getElementById('year-progress-bar').style.width = percent + '%'; }
@@ -1048,12 +1178,270 @@
 
         // --- MONTHLY PLANNER ---
         let currentMonthDate = new Date();
+        // ============ CALENDAR EVENT-BAR SYSTEM ============
+        // Dữ liệu: cloudState[monthKey].events = [{ id, start, end, text, color }]  (start/end = số ngày 1..31)
+        function getMonthKey() { return `monthly_${currentMonthDate.getFullYear()}_${currentMonthDate.getMonth()}`; }
+        function getMonthData() {
+            const k = getMonthKey();
+            const d = cloudState[k] || {};
+            if (!Array.isArray(d.goals)) d.goals = [];
+            if (!Array.isArray(d.events)) d.events = [];
+            cloudState[k] = d;
+            return d;
+        }
+
+        function renderCalendar() {
+            const mData = getMonthData();
+            const grid = document.getElementById('calendar-grid');
+            const monthYearDisplay = document.getElementById('month-year-display');
+            const year = currentMonthDate.getFullYear();
+            const month = currentMonthDate.getMonth();
+            monthYearDisplay.innerText = `Tháng ${month + 1}, ${year}`;
+
+            const daysOfWeek = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const emptyCellsBefore = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+            const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+
+            // Tạo mảng ô: null cho ô trống, số ngày cho ô thật
+            const cells = [];
+            for (let i = 0; i < emptyCellsBefore; i++) cells.push(null);
+            for (let day = 1; day <= daysInMonth; day++) cells.push(day);
+            while (cells.length % 7 !== 0) cells.push(null);
+
+            let html = '';
+            daysOfWeek.forEach(d => html += `<div class="cal-day-name">${d}</div>`);
+            cells.forEach((day, idx) => {
+                if (day === null) { html += `<div class="cal-cell empty"></div>`; return; }
+                const isTodayClass = (isCurrentMonth && day === today.getDate()) ? 'today' : '';
+                html += `<div class="cal-cell ${isTodayClass}" data-day="${day}"
+                    onmousedown="calCellMouseDown(event, ${day})" onmouseenter="calCellMouseEnter(${day})"
+                    ontouchstart="calCellTouchStart(event, ${day})">
+                    <div class="cal-cell-header"><span class="cal-date-num">${day}</span></div>
+                </div>`;
+            });
+            grid.innerHTML = html;
+
+            // Đợi layout ổn định rồi vẽ thanh (cần offset thật)
+            requestAnimationFrame(() => renderEventBars(cells, daysInMonth));
+        }
+
+        // Vẽ các thanh event chồng lên lưới. Sắp xếp thanh dài lên trên, ngắn xuống dưới.
+        function renderEventBars(cells, daysInMonth) {
+            const mData = getMonthData();
+            const grid = document.getElementById('calendar-grid');
+            grid.querySelectorAll('.cal-events-layer').forEach(l => l.remove());
+
+            const dayPos = {};
+            cells.forEach((day, i) => { if (day !== null) dayPos[day] = { week: Math.floor(i / 7), col: i % 7 }; });
+            const numWeeks = cells.length / 7;
+            const cellEls = [...grid.querySelectorAll('.cal-cell')];
+            const gridRect = grid.getBoundingClientRect();
+
+            // Sắp xếp events: dài (nhiều ngày) lên trên
+            const events = [...mData.events].sort((a, b) => (Math.abs(b.end-b.start)) - (Math.abs(a.end-a.start)));
+
+            // Tách event thành segment theo tuần
+            const segments = [];
+            events.forEach(ev => {
+                let s = Math.max(1, Math.min(ev.start, ev.end));
+                let e = Math.min(daysInMonth, Math.max(ev.start, ev.end));
+                for (let day = s; day <= e; ) {
+                    const pos = dayPos[day]; if (!pos) { day++; continue; }
+                    const week = pos.week, startCol = pos.col;
+                    let endDay = day;
+                    while (endDay + 1 <= e && dayPos[endDay + 1] && dayPos[endDay + 1].week === week) endDay++;
+                    segments.push({ ev, week, startCol, endCol: dayPos[endDay].col, isStart: day === s });
+                    day = endDay + 1;
+                }
+            });
+
+            // Gán lane trong từng tuần
+            const weekLanes = {};
+            segments.forEach(seg => {
+                if (!weekLanes[seg.week]) weekLanes[seg.week] = [];
+                const lanes = weekLanes[seg.week]; let placed = false;
+                for (let li = 0; li < lanes.length; li++) {
+                    if (!lanes[li].some(iv => !(seg.endCol < iv.s || seg.startCol > iv.e))) {
+                        lanes[li].push({ s: seg.startCol, e: seg.endCol }); seg.lane = li; placed = true; break;
+                    }
+                }
+                if (!placed) { lanes.push([{ s: seg.startCol, e: seg.endCol }]); seg.lane = lanes.length - 1; }
+            });
+
+            const barHeight = 22, barGap = 3, topInCell = 30;
+            // Một layer phủ toàn grid, đặt bar bằng toạ độ tuyệt đối so với grid
+            const layer = document.createElement('div');
+            layer.className = 'cal-events-layer';
+            layer.style.top = '0'; layer.style.left = '0'; layer.style.right = '0'; layer.style.bottom = '0';
+            grid.appendChild(layer);
+
+            segments.forEach(seg => {
+                const startCellIdx = seg.week * 7 + seg.startCol;
+                const endCellIdx = seg.week * 7 + seg.endCol;
+                const startCell = cellEls[startCellIdx], endCell = cellEls[endCellIdx];
+                if (!startCell || !endCell) return;
+                const sRect = startCell.getBoundingClientRect(), eRect = endCell.getBoundingClientRect();
+                const bar = document.createElement('div');
+                bar.className = 'cal-event-bar';
+                bar.style.left = (sRect.left - gridRect.left + 3) + 'px';
+                bar.style.width = (eRect.right - sRect.left - 6) + 'px';
+                bar.style.top = (sRect.top - gridRect.top + topInCell + seg.lane * (barHeight + barGap)) + 'px';
+                bar.style.height = barHeight + 'px';
+                bar.style.background = seg.ev.color || '#3b82f6';
+                bar.textContent = seg.isStart ? (seg.ev.text || '') : '';
+                bar.title = seg.ev.text || '';
+                bar.onclick = (e) => { e.stopPropagation(); openCalEvent(seg.ev.id); };
+                layer.appendChild(bar);
+            });
+        }
+
+        // ---- Kéo chọn khoảng ngày ----
+        let calDragStart = null, calDragEnd = null, calIsDragging = false;
+        function calCellMouseDown(e, day) {
+            if (e.button !== 0) return;
+            calDragStart = day; calDragEnd = day; calIsDragging = true;
+            highlightDragRange();
+        }
+        function calCellMouseEnter(day) {
+            if (!calIsDragging) return;
+            calDragEnd = day;
+            highlightDragRange();
+        }
+        function highlightDragRange() {
+            const s = Math.min(calDragStart, calDragEnd), en = Math.max(calDragStart, calDragEnd);
+            document.querySelectorAll('.cal-cell[data-day]').forEach(c => {
+                const d = parseInt(c.dataset.day);
+                c.classList.toggle('drag-selecting', d >= s && d <= en);
+            });
+        }
+        function calMouseUp() {
+            if (!calIsDragging) return;
+            calIsDragging = false;
+            document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('drag-selecting'));
+            const s = Math.min(calDragStart, calDragEnd), en = Math.max(calDragStart, calDragEnd);
+            // Màu mặc định: xanh dương nếu nhiều ngày, vàng nếu 1 ngày
+            const isSingle = s === en;
+            createCalEvent(s, en, isSingle ? '#eab308' : '#3b82f6');
+            calDragStart = calDragEnd = null;
+        }
+        document.addEventListener('mouseup', calMouseUp);
+
+        // Cảm ứng (điện thoại): chạm 1 ô tạo event 1 ngày màu vàng
+        function calCellTouchStart(e, day) {
+            createCalEvent(day, day, '#eab308');
+        }
+
+        function createCalEvent(start, end, color) {
+            const mData = getMonthData();
+            const ev = { id: 'ev_' + Date.now() + '_' + Math.floor(Math.random()*1000), start, end, text: '', color };
+            mData.events.push(ev);
+            pushToCloud(getMonthKey(), mData);
+            renderCalendar();
+            openCalEvent(ev.id); // mở modal để nhập nội dung ngay
+        }
+
+        // ---- Modal chỉnh sửa event ----
+        const CAL_COLORS = ['#3b82f6','#eab308','#ef4444','#22c55e','#a855f7','#ec4899','#f97316','#14b8a6'];
+        let editingEventId = null;
+        let calNewMode = false;
+
+        // Chuyển số ngày (trong tháng hiện tại) -> chuỗi yyyy-mm-dd
+        function dayToDateStr(day) {
+            const y = currentMonthDate.getFullYear(), m = currentMonthDate.getMonth();
+            return `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        }
+        // Chuyển yyyy-mm-dd -> số ngày (chỉ dùng phần ngày; nếu khác tháng vẫn giữ số ngày để hiển thị trong tháng đang xem)
+        function dateStrToDay(str) {
+            const parts = (str||'').split('-');
+            if (parts.length !== 3) return null;
+            return parseInt(parts[2]);
+        }
+
+        // Mở modal để TẠO MỚI sự kiện qua nút [+]
+        function openCalEventNew() {
+            calNewMode = true;
+            editingEventId = null;
+            const today = new Date();
+            const isCurMonth = today.getMonth() === currentMonthDate.getMonth() && today.getFullYear() === currentMonthDate.getFullYear();
+            const defDay = isCurMonth ? today.getDate() : 1;
+            document.getElementById('cal-event-text').value = '';
+            document.getElementById('cal-event-start').value = dayToDateStr(defDay);
+            document.getElementById('cal-event-end').value = dayToDateStr(defDay);
+            document.getElementById('cal-event-custompicker').value = '#3b82f6';
+            document.getElementById('cal-picker-circle').style.background = '#e2e8f0';
+            let sw = '';
+            CAL_COLORS.forEach(c => { const sel = (c === '#3b82f6'); sw += `<div class="cal-event-swatch habit-edit-color-swatch" style="background:${c}; border-color:${sel?'#1e293b':'transparent'};" onclick="selectCalColor('${c}')"></div>`; });
+            document.getElementById('cal-event-colors').innerHTML = sw;
+            document.getElementById('cal-event-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('cal-event-text').focus(), 100);
+        }
+
+        function openCalEvent(id) {
+            const mData = getMonthData();
+            const ev = mData.events.find(e => e.id === id);
+            if (!ev) return;
+            calNewMode = false;
+            editingEventId = id;
+            document.getElementById('cal-event-text').value = ev.text || '';
+            document.getElementById('cal-event-start').value = dayToDateStr(Math.min(ev.start, ev.end));
+            document.getElementById('cal-event-end').value = dayToDateStr(Math.max(ev.start, ev.end));
+            document.getElementById('cal-event-custompicker').value = ev.color || '#3b82f6';
+            document.getElementById('cal-picker-circle').style.background = '#e2e8f0';
+            let sw = '';
+            CAL_COLORS.forEach(c => {
+                const sel = (ev.color === c);
+                sw += `<div class="cal-event-swatch habit-edit-color-swatch" style="background:${c}; border-color:${sel?'#1e293b':'transparent'};" onclick="selectCalColor('${c}')"></div>`;
+            });
+            document.getElementById('cal-event-colors').innerHTML = sw;
+            document.getElementById('cal-event-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('cal-event-text').focus(), 100);
+        }
+        function selectCalColor(hex) {
+            document.querySelectorAll('.cal-event-swatch').forEach(s => {
+                s.style.borderColor = (s.style.background === hex || s.style.backgroundColor === hex) ? '#1e293b' : 'transparent';
+            });
+            document.getElementById('cal-event-custompicker').value = hex;
+        }
+        function saveCalEvent() {
+            const mData = getMonthData();
+            const selSwatch = [...document.querySelectorAll('.cal-event-swatch')].find(s => s.style.borderColor === 'rgb(30, 41, 59)');
+            const color = selSwatch ? selSwatch.style.background : document.getElementById('cal-event-custompicker').value;
+            const text = document.getElementById('cal-event-text').value;
+            let startDay = dateStrToDay(document.getElementById('cal-event-start').value);
+            let endDay = dateStrToDay(document.getElementById('cal-event-end').value);
+            if (startDay === null || endDay === null) { alert('Vui lòng chọn ngày hợp lệ.'); return; }
+            if (startDay > endDay) { const t = startDay; startDay = endDay; endDay = t; }
+
+            if (calNewMode) {
+                mData.events.push({ id: 'ev_' + Date.now() + '_' + Math.floor(Math.random()*1000), start: startDay, end: endDay, text, color });
+            } else {
+                const ev = mData.events.find(e => e.id === editingEventId);
+                if (ev) { ev.text = text; ev.color = color; ev.start = startDay; ev.end = endDay; }
+            }
+            pushToCloud(getMonthKey(), mData);
+            closeCalEvent();
+            renderCalendar();
+        }
+        function deleteCalEvent() {
+            if (calNewMode) { closeCalEvent(); return; } // đang tạo mới, chưa có gì để xoá
+            const mData = getMonthData();
+            mData.events = mData.events.filter(e => e.id !== editingEventId);
+            pushToCloud(getMonthKey(), mData);
+            closeCalEvent();
+            renderCalendar();
+        }
+        function closeCalEvent() { document.getElementById('cal-event-modal').style.display = 'none'; editingEventId = null; calNewMode = false; }
+
         function changeMonth(step) { currentMonthDate.setMonth(currentMonthDate.getMonth() + step); renderMonthlyGoals(); renderCalendar(); }
-        function renderMonthlyGoals() { const monthKey = `monthly_${currentMonthDate.getFullYear()}_${currentMonthDate.getMonth()}`; const mData = cloudState[monthKey] || { goals: [], days: [] }; const container = document.getElementById('monthly-goals-list'); let html = ''; for(let i = 1; i <= 3; i++) { const rowId = `monthly-goal-${i}`; const item = mData.goals[i-1] || {done: false, text: ""}; const checked = item.done ? "checked" : ""; const completed = item.done ? "completed" : ""; html += `<div class="task-row ${completed}" id="${rowId}"><input type="checkbox" class="task-done-box" id="${rowId}-done" onchange="toggleTaskDone('${rowId}', this); saveMonthly();" ${checked}><input type="text" class="task-input" id="${rowId}-text" placeholder="• Nhập mục tiêu quan trọng ${i}..." style="font-weight: 500;" value="${item.text.replace(/"/g, '&quot;')}" oninput="saveMonthly()"></div>`; } container.innerHTML = html; }
-        function renderCalendar() { const monthKey = `monthly_${currentMonthDate.getFullYear()}_${currentMonthDate.getMonth()}`; const mData = cloudState[monthKey] || { goals: [], days: [] }; const grid = document.getElementById('calendar-grid'); const monthYearDisplay = document.getElementById('month-year-display'); const year = currentMonthDate.getFullYear(); const month = currentMonthDate.getMonth(); monthYearDisplay.innerText = `Tháng ${month + 1}, ${year}`; const daysOfWeek = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']; let html = ''; daysOfWeek.forEach(d => html += `<div class="cal-day-name">${d}</div>`); const firstDayOfMonth = new Date(year, month, 1).getDay(); const emptyCellsBefore = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; const daysInMonth = new Date(year, month + 1, 0).getDate(); for(let i = 0; i < emptyCellsBefore; i++) html += `<div class="cal-cell empty"></div>`; const today = new Date(); const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year; for(let day = 1; day <= daysInMonth; day++) { const isTodayClass = (isCurrentMonth && day === today.getDate()) ? 'today' : ''; const dData = mData.days[day-1] || { icon: "📌", tag: "cal-tag-btn", events: `<div contenteditable="true" class="cal-event-input" placeholder="•" oninput="saveMonthly()"></div><div contenteditable="true" class="cal-event-input" placeholder="•" oninput="saveMonthly()"></div><div contenteditable="true" class="cal-event-input" placeholder="•" oninput="saveMonthly()"></div>` }; html += `<div class="cal-cell ${isTodayClass}"><div class="cal-cell-header"><span class="cal-date-num">${day}</span><div class="cal-tools"><button class="cal-icon-btn" onclick="cycleIcon(this)">${dData.icon}</button><button class="${dData.tag}" onclick="cycleTagColor(this)"></button></div></div><div class="cal-events">${dData.events}</div></div>`; } grid.innerHTML = html; }
-        function saveMonthly() { const monthKey = `monthly_${currentMonthDate.getFullYear()}_${currentMonthDate.getMonth()}`; const data = { goals: [], days: [] }; for(let i=1; i<=3; i++) { data.goals.push({ done: document.getElementById(`monthly-goal-${i}-done`).checked, text: document.getElementById(`monthly-goal-${i}-text`).value }); } document.querySelectorAll('.cal-cell:not(.empty)').forEach((cell) => { data.days.push({ icon: cell.querySelector('.cal-icon-btn').innerText, tag: cell.querySelector('.cal-tag-btn').className, events: cell.querySelector('.cal-events').innerHTML }); }); pushToCloud(monthKey, data); }
-        function cycleTagColor(btn) { const colors = ['', 'tag-red', 'tag-yellow', 'tag-green', 'tag-blue']; let currentClass = ''; colors.forEach(c => { if(c && btn.classList.contains(c)) currentClass = c; }); let nextIndex = (colors.indexOf(currentClass) + 1) % colors.length; colors.forEach(c => { if(c) btn.classList.remove(c); }); if(colors[nextIndex]) btn.classList.add(colors[nextIndex]); saveMonthly(); }
-        function cycleIcon(btn) { const icons = ['📌', '✈️', '🎂', '🏥', '💰', '☕', '🎉', '🏋️']; let current = btn.innerText; let nextIndex = (icons.indexOf(current) + 1) % icons.length; btn.innerText = icons[nextIndex]; if(icons[nextIndex] !== '📌') { btn.style.opacity = "1"; btn.style.transform = "scale(1.2)"; } else { btn.style.opacity = "0.3"; btn.style.transform = "scale(1)"; } saveMonthly(); }
+        function renderMonthlyGoals() { const monthKey = getMonthKey(); const mData = getMonthData(); const container = document.getElementById('monthly-goals-list'); let html = ''; for(let i = 1; i <= 3; i++) { const rowId = `monthly-goal-${i}`; const item = mData.goals[i-1] || {done: false, text: ""}; const checked = item.done ? "checked" : ""; const completed = item.done ? "completed" : ""; html += `<div class="task-row ${completed}" id="${rowId}"><input type="checkbox" class="task-done-box" id="${rowId}-done" onchange="toggleTaskDone('${rowId}', this); saveMonthly();" ${checked}><input type="text" class="task-input" id="${rowId}-text" placeholder="• Nhập mục tiêu quan trọng ${i}..." style="font-weight: 500;" value="${(item.text||'').replace(/"/g, '&quot;')}" oninput="saveMonthly()"></div>`; } container.innerHTML = html; }
+        function saveMonthly() { const monthKey = getMonthKey(); const data = getMonthData(); data.goals = []; for(let i=1; i<=3; i++) { const de = document.getElementById(`monthly-goal-${i}-done`); const te = document.getElementById(`monthly-goal-${i}-text`); if(de&&te) data.goals.push({ done: de.checked, text: te.value }); } pushToCloud(monthKey, data); }
+
+        // Vẽ lại thanh khi đổi kích thước cửa sổ (vì dùng offsetHeight)
+        let calResizeTimer = null;
+        window.addEventListener('resize', () => { clearTimeout(calResizeTimer); calResizeTimer = setTimeout(() => { if(document.getElementById('calendar').classList.contains('active')) renderCalendar(); }, 200); });
 
         // --- DAILY PLANNER BẤT TỬ ---
         let currentDailyDate = new Date();
@@ -1076,97 +1464,285 @@
             updateDailyHeader(); 
         }
         
-        function renderDailyTasksDOM() { 
-            const taskList = document.getElementById('task-list'); let html = ''; const clockIcon = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition: 0.2s;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`; 
-            for(let i = 1; i <= 5; i++) { 
-                const rowId = `daily-row-${i}`; 
-                html += `<div class="task-row" id="${rowId}">
-                    <div class="daily-task-main">
-                        <input type="checkbox" class="task-done-box" id="daily-done-${i}" onchange="toggleTaskDone('${rowId}', this); saveDailyData();">
-                        <input type="text" class="task-input" id="daily-task-${i}" placeholder="• Nhập công việc ${i}..." oninput="saveDailyData()">
-                        <input type="number" class="est-pomo-input" id="daily-est-${i}" placeholder="Dự kiến" min="1" max="10" oninput="saveDailyData()">
-                        <button class="row-pomo-btn" onclick="handleTomatoClick(${i}, this)">${clockIcon}</button>
-                    </div>
-                    <div class="pomo-boxes">`; 
-                for(let j=1; j<=10; j++) { html += `<input type="checkbox" class="pomo-box" id="daily-pomo-${i}-${j}" onchange="saveDailyData()">`; } 
-                html += `</div></div>`; 
-            } 
-            taskList.innerHTML = html; 
+        // ===== DAILY TASKS DẠNG THẺ =====
+        // Model: cloudState[dailyKey].tasks = [{ id, done, text, color }]
+        function getDailyData() {
+            const k = getDailyDateKey();
+            const d = cloudState[k] || {};
+            if (!Array.isArray(d.tasks)) d.tasks = [];
+            if (typeof d.note !== 'string') d.note = '';
+            if (typeof d.mood !== 'string') d.mood = '';
+            if (typeof d.reviewChecked !== 'boolean') d.reviewChecked = false;
+            if (typeof d.mitId === 'undefined') d.mitId = null; // id task được đánh dấu quan trọng nhất
+            if (typeof d.exercise === 'undefined') d.exercise = null; // { text, done }
+            d.tasks.forEach((t, idx) => {
+                if (!t.id) t.id = 'dt_' + Date.now() + '_' + idx + '_' + Math.floor(Math.random()*1000);
+                if (typeof t.color !== 'string') t.color = '#94a3b8';
+                if (typeof t.text !== 'string') t.text = '';
+                if (typeof t.done !== 'boolean') t.done = false;
+                if (!Array.isArray(t.checks)) t.checks = Array.isArray(t.pomos) ? t.pomos.slice(0, 10) : [];
+                while (t.checks.length < 10) t.checks.push(false);
+            });
+            cloudState[k] = d;
+            return d;
         }
-        
-        function loadDailyData() { 
-            const data = cloudState[getDailyDateKey()] || { tasks: [], note: "", mood: "", reviewChecked: false }; 
-            document.querySelectorAll('.mood-btn').forEach(b => { b.classList.remove('active'); if(b.innerText === data.mood) b.classList.add('active'); }); 
-            document.getElementById('daily-notes').value = data.note || ""; 
-            document.getElementById('review-check').checked = data.reviewChecked || false; 
-            
-            for(let i = 1; i <= 5; i++) { 
-                const tData = data.tasks[i-1] || {}; 
-                document.getElementById(`daily-done-${i}`).checked = tData.done || false; 
-                if(tData.done) document.getElementById(`daily-row-${i}`).classList.add('completed'); 
-                else document.getElementById(`daily-row-${i}`).classList.remove('completed'); 
-                
-                document.getElementById(`daily-task-${i}`).value = tData.text || ""; 
-                document.getElementById(`daily-est-${i}`).value = tData.est || ""; 
-                
-                const pomos = tData.pomos || []; 
-                for(let j=1; j<=10; j++) { document.getElementById(`daily-pomo-${i}-${j}`).checked = pomos[j-1] || false; } 
-            } 
+
+        function getExercisePresets() {
+            let p = cloudState['exercise_presets'];
+            if (!Array.isArray(p)) { p = ['Tập gym', 'Đạp xe đạp', 'Đánh cầu lông']; cloudState['exercise_presets'] = p; }
+            return p;
         }
-        
-        function saveDailyData() { 
-            const data = { tasks: [], note: document.getElementById('daily-notes').value, mood: "", reviewChecked: document.getElementById('review-check').checked }; 
-            const activeMoodBtn = document.querySelector('.mood-btn.active'); if (activeMoodBtn) data.mood = activeMoodBtn.innerText; 
-            for(let i = 1; i <= 5; i++) { 
-                const taskObj = { done: document.getElementById(`daily-done-${i}`).checked, text: document.getElementById(`daily-task-${i}`).value, est: document.getElementById(`daily-est-${i}`).value, pomos: [] }; 
-                for(let j=1; j<=10; j++) { taskObj.pomos.push(document.getElementById(`daily-pomo-${i}-${j}`).checked); } data.tasks.push(taskObj); 
-            } 
-            pushToCloud(getDailyDateKey(), data); 
+
+        // Tạo HTML cho 1 thẻ task thường (có 10 ô nhỏ). forceColor: ép màu hiển thị; hideDrag: ẩn tay cầm kéo
+        function buildTaskCardHTML(t, forceColor, hideDrag) {
+            const color = forceColor || t.color || '#94a3b8';
+            const bg = color + '22';
+            const displayText = (t.text || '').trim() || 'Task mới';
+            const checks = Array.isArray(t.checks) ? t.checks : [];
+            let boxesHtml = '';
+            for (let j = 0; j < 10; j++) {
+                boxesHtml += `<input type="checkbox" class="dtask-pomo" ${checks[j] ? 'checked' : ''} onchange="toggleDtaskCheck('${t.id}', ${j}, this.checked)">`;
+            }
+            const dragHandle = hideDrag ? '' : `<span class="dtask-drag" style="color:${color};">☰</span>`;
+            return `<div class="dtask-card ${t.done ? 'completed' : ''}" data-id="${t.id}" draggable="true"
+                ondragstart="dtaskDragStart(event, '${t.id}')" ondragover="dtaskDragOver(event)" ondrop="dtaskDrop(event, '${t.id}')" ondragend="dtaskDragEnd(event)"
+                style="background:${bg}; border-left-color:${color};">
+                ${dragHandle}
+                <input type="checkbox" class="dtask-check" ${t.done ? 'checked' : ''} onchange="toggleDtaskDone('${t.id}', this.checked)">
+                <div class="dtask-body" onclick="openDtaskEdit('${t.id}')">
+                    <span class="dtask-title">${displayText}</span>
+                    <span style="font-size:13px; color:#94a3b8; flex-shrink:0;">✏️</span>
+                </div>
+                <div class="dtask-boxes">${boxesHtml}</div>
+            </div>`;
         }
-        
+
+        function renderDailyTasksDOM() {
+            const data = getDailyData();
+            const taskList = document.getElementById('task-list');
+
+            // ---- Khung MIT (việc quan trọng nhất) ----
+            const mitBox = document.getElementById('mit-box');
+            const mitContent = document.getElementById('mit-content');
+            const mitTask = data.mitId ? data.tasks.find(t => t.id === data.mitId) : null;
+            if (mitTask) {
+                mitContent.className = '';
+                mitContent.innerHTML = buildTaskCardHTML(mitTask, '#ef4444', true) +
+                    `<button onclick="removeMit()" title="Bỏ khỏi khung" style="position:absolute; top:6px; right:8px; border:none; background:rgba(255,255,255,0.8); color:#ef4444; border-radius:50%; width:22px; height:22px; cursor:pointer; font-size:12px; font-weight:bold; z-index:2;">✖</button>`;
+                mitBox.style.position = 'relative';
+            } else {
+                mitContent.className = 'special-placeholder';
+                mitContent.innerHTML = `🎯 VIỆC QUAN TRỌNG NHẤT<br><span style="font-size:12px; font-weight:normal; opacity:0.7;">(Kéo một task vào đây)</span>`;
+            }
+
+            // ---- Khung Thể dục ----
+            const exContent = document.getElementById('ex-content');
+            if (data.exercise) {
+                exContent.className = '';
+                const ex = data.exercise;
+                exContent.innerHTML = `<div class="dtask-card ex-card ${ex.done ? 'completed' : ''}" onclick="event.stopPropagation()" style="background:#fde04722; border-left-color:#eab308; width:100%;">
+                    <input type="checkbox" class="dtask-check" ${ex.done ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleExerciseDone(this.checked)">
+                    <div class="dtask-body"><span class="dtask-title">${(ex.text||'').trim()||'Thể dục'}</span></div>
+                    <button onclick="event.stopPropagation(); removeExercise()" title="Bỏ chọn" style="border:none; background:rgba(255,255,255,0.7); color:#ca8a04; border-radius:50%; width:24px; height:24px; cursor:pointer; font-size:12px; font-weight:bold; flex-shrink:0;">✖</button>
+                </div>`;
+            } else {
+                exContent.className = 'special-placeholder';
+                exContent.innerHTML = `🏃 THỂ DỤC<br><span style="font-size:12px; font-weight:normal; opacity:0.7;">(Bấm để chọn)</span>`;
+            }
+
+            // ---- Danh sách task thường (loại bỏ task đang nằm trong MIT) ----
+            const listTasks = data.tasks.filter(t => t.id !== data.mitId);
+            const ordered = [...listTasks].sort((a, b) => (a.done === b.done) ? 0 : (a.done ? 1 : -1));
+            let html = '';
+            ordered.forEach(t => { html += buildTaskCardHTML(t); });
+            if (listTasks.length === 0) {
+                html = '<div style="text-align:center; color:#94a3b8; font-style:italic; padding:24px 0;">Chưa có task nào. Bấm "➕ Thêm task" để bắt đầu.</div>';
+            }
+            taskList.innerHTML = html;
+        }
+
+        // ---- Khung MIT: kéo thả ----
+        function mitDragOver(e) { if (dtaskDragId) { e.preventDefault(); document.getElementById('mit-box').classList.add('drag-hover'); } }
+        function mitDragLeave(e) { document.getElementById('mit-box').classList.remove('drag-hover'); }
+        function mitDrop(e) {
+            e.preventDefault(); e.stopPropagation();
+            document.getElementById('mit-box').classList.remove('drag-hover');
+            let fromId = dtaskDragId || e.dataTransfer.getData('text/plain');
+            if (!fromId) return;
+            const data = getDailyData();
+            data.mitId = fromId;
+            pushToCloud(getDailyDateKey(), data);
+            dtaskDragId = null;
+            renderDailyTasksDOM();
+        }
+        function removeMit() {
+            const data = getDailyData();
+            data.mitId = null;
+            pushToCloud(getDailyDateKey(), data);
+            renderDailyTasksDOM();
+        }
+
+        // ---- Khung Thể dục ----
+        function openExercisePicker() {
+            const presets = getExercisePresets();
+            let html = '';
+            presets.forEach(name => {
+                html += `<button class="ex-opt-btn" onclick="pickExercise('${name.replace(/'/g,"\\'")}')" style="text-align:center; padding:12px; border:1.5px solid #fde047; background:#fefce8; border-radius:10px; font-size:15px; font-weight:600; color:#854d0e; cursor:pointer; transition:0.15s;">${name}</button>`;
+            });
+            html += `<button onclick="pickExerciseOther()" style="text-align:center; padding:12px; border:1.5px dashed #cbd5e1; background:#f8fafc; border-radius:10px; font-size:15px; font-weight:600; color:#64748b; cursor:pointer;">➕ Khác (tạo mới)</button>`;
+            document.getElementById('ex-options').innerHTML = html;
+            document.getElementById('ex-picker-modal').style.display = 'flex';
+        }
+        function closeExercisePicker() { document.getElementById('ex-picker-modal').style.display = 'none'; }
+        function pickExercise(name) {
+            const data = getDailyData();
+            data.exercise = { text: name, done: false };
+            pushToCloud(getDailyDateKey(), data);
+            closeExercisePicker();
+            renderDailyTasksDOM();
+        }
+        function pickExerciseOther() {
+            const name = prompt('Nhập tên bài thể dục mới:');
+            if (!name || !name.trim()) return;
+            const trimmed = name.trim();
+            // Lưu preset cho lần sau
+            const presets = getExercisePresets();
+            if (!presets.includes(trimmed)) { presets.push(trimmed); cloudState['exercise_presets'] = presets; pushToCloud('exercise_presets', presets); }
+            pickExercise(trimmed);
+        }
+        function toggleExerciseDone(done) {
+            const data = getDailyData();
+            if (data.exercise) data.exercise.done = done;
+            pushToCloud(getDailyDateKey(), data);
+            renderDailyTasksDOM();
+        }
+        function removeExercise() {
+            const data = getDailyData();
+            data.exercise = null;
+            pushToCloud(getDailyDateKey(), data);
+            renderDailyTasksDOM();
+        }
+
+        function addDailyTask() {
+            dtaskNewMode = true;
+            editingDtaskId = null;
+            document.getElementById('dtask-text').value = '';
+            document.getElementById('dtask-custompicker').value = '#3b82f6';
+            document.getElementById('dtask-picker-circle').style.background = '#e2e8f0';
+            let sw = '';
+            CAL_COLORS.forEach(c => { const sel = (c === '#3b82f6'); sw += `<div class="dtask-swatch habit-edit-color-swatch" style="background:${c}; border-color:${sel?'#1e293b':'transparent'};" onclick="selectDtaskColor('${c}')"></div>`; });
+            document.getElementById('dtask-colors').innerHTML = sw;
+            document.getElementById('dtask-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('dtask-text').focus(), 100);
+        }
+
+        function toggleDtaskDone(id, done) {
+            const data = getDailyData();
+            const t = data.tasks.find(x => x.id === id);
+            if (t) { t.done = done; }
+            pushToCloud(getDailyDateKey(), data);
+            renderDailyTasksDOM();
+        }
+
+        function toggleDtaskCheck(id, boxIndex, checked) {
+            const data = getDailyData();
+            const t = data.tasks.find(x => x.id === id);
+            if (t) {
+                if (!Array.isArray(t.checks)) t.checks = [];
+                while (t.checks.length < 10) t.checks.push(false);
+                t.checks[boxIndex] = checked;
+            }
+            pushToCloud(getDailyDateKey(), data);
+            // Không render lại để không mất focus; chỉ lưu
+        }
+
+        // Modal chỉnh sửa daily task
+        let editingDtaskId = null, dtaskNewMode = false;
+        function openDtaskEdit(id) {
+            const data = getDailyData();
+            const t = data.tasks.find(x => x.id === id);
+            if (!t) return;
+            dtaskNewMode = false;
+            editingDtaskId = id;
+            document.getElementById('dtask-text').value = t.text || '';
+            document.getElementById('dtask-custompicker').value = t.color || '#3b82f6';
+            document.getElementById('dtask-picker-circle').style.background = '#e2e8f0';
+            let sw = '';
+            CAL_COLORS.forEach(c => { const sel = (t.color === c); sw += `<div class="dtask-swatch habit-edit-color-swatch" style="background:${c}; border-color:${sel?'#1e293b':'transparent'};" onclick="selectDtaskColor('${c}')"></div>`; });
+            document.getElementById('dtask-colors').innerHTML = sw;
+            document.getElementById('dtask-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('dtask-text').focus(), 100);
+        }
+        function selectDtaskColor(hex) {
+            document.querySelectorAll('.dtask-swatch').forEach(s => {
+                s.style.borderColor = (s.style.background === hex || s.style.backgroundColor === hex) ? '#1e293b' : 'transparent';
+            });
+            document.getElementById('dtask-custompicker').value = hex;
+        }
+        function saveDtaskEdit() {
+            const data = getDailyData();
+            const selSwatch = [...document.querySelectorAll('.dtask-swatch')].find(s => s.style.borderColor === 'rgb(30, 41, 59)');
+            const color = selSwatch ? selSwatch.style.background : document.getElementById('dtask-custompicker').value;
+            const text = document.getElementById('dtask-text').value;
+            if (dtaskNewMode) {
+                data.tasks.push({ id: 'dt_' + Date.now() + '_' + Math.floor(Math.random()*1000), done: false, text, color, checks: [false,false,false,false,false,false,false,false,false,false] });
+            } else {
+                const t = data.tasks.find(x => x.id === editingDtaskId);
+                if (t) { t.text = text; t.color = color; }
+            }
+            pushToCloud(getDailyDateKey(), data);
+            closeDtaskEdit();
+            renderDailyTasksDOM();
+        }
+        function deleteDtask() {
+            if (dtaskNewMode) { closeDtaskEdit(); return; }
+            const data = getDailyData();
+            data.tasks = data.tasks.filter(x => x.id !== editingDtaskId);
+            pushToCloud(getDailyDateKey(), data);
+            closeDtaskEdit();
+            renderDailyTasksDOM();
+        }
+        function closeDtaskEdit() { document.getElementById('dtask-modal').style.display = 'none'; editingDtaskId = null; dtaskNewMode = false; }
+
+        // Kéo thả sắp xếp task
+        let dtaskDragId = null;
+        function dtaskDragStart(e, id) { dtaskDragId = id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); setTimeout(() => e.currentTarget.classList.add('dragging'), 0); }
+        function dtaskDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
+        function dtaskDragEnd(e) { e.currentTarget.classList.remove('dragging'); }
+        function dtaskDrop(e, dropId) {
+            e.preventDefault(); e.stopPropagation();
+            document.querySelectorAll('.dtask-card').forEach(c => c.classList.remove('dragging'));
+            let fromId = dtaskDragId || e.dataTransfer.getData('text/plain');
+            if (!fromId || fromId === dropId) { dtaskDragId = null; return; }
+            const data = getDailyData();
+            const fromIdx = data.tasks.findIndex(t => t.id === fromId);
+            const toIdx = data.tasks.findIndex(t => t.id === dropId);
+            if (fromIdx < 0 || toIdx < 0) { dtaskDragId = null; return; }
+            const [moved] = data.tasks.splice(fromIdx, 1);
+            data.tasks.splice(toIdx, 0, moved);
+            pushToCloud(getDailyDateKey(), data);
+            dtaskDragId = null;
+            renderDailyTasksDOM();
+        }
+
+        function loadDailyData() {
+            const data = getDailyData();
+            document.querySelectorAll('.mood-btn').forEach(b => { b.classList.remove('active'); if(b.innerText === data.mood) b.classList.add('active'); });
+            document.getElementById('daily-notes').value = data.note || "";
+            document.getElementById('review-check').checked = data.reviewChecked || false;
+            renderDailyTasksDOM();
+        }
+
+        function saveDailyData() {
+            const data = getDailyData();
+            data.note = document.getElementById('daily-notes').value;
+            data.reviewChecked = document.getElementById('review-check').checked;
+            const activeMoodBtn = document.querySelector('.mood-btn.active');
+            data.mood = activeMoodBtn ? activeMoodBtn.innerText : '';
+            pushToCloud(getDailyDateKey(), data);
+        }
+
         function selectMood(btn, moodEmoji) { document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); saveDailyData(); }
-        let timeRemaining = 25 * 60, isWorking = true, timerInterval = null, activeTaskIndex = null; 
-        function updateMiniTimerDisplay() { let mins = Math.floor(timeRemaining / 60), secs = timeRemaining % 60; document.getElementById('mini-clock').innerText = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs; }
-        function handleTomatoClick(taskIndex, btnElement) { if (activeTaskIndex === taskIndex) { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; btnElement.classList.remove('running'); document.getElementById('mini-status').innerText = "⏸️ Tạm dừng"; } else { btnElement.classList.add('running'); startCountdown(taskIndex); } return; } if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } document.querySelectorAll('.row-pomo-btn').forEach(b => b.classList.remove('running')); document.querySelectorAll('.task-row').forEach(r => r.classList.remove('focusing')); activeTaskIndex = taskIndex; isWorking = true; timeRemaining = 25 * 60; document.getElementById(`daily-row-${taskIndex}`).classList.add('focusing'); btnElement.classList.add('running'); startCountdown(taskIndex); }
-        function startCountdown(taskIndex) { 
-            const statusText = document.getElementById('mini-status'); 
-            const taskName = document.getElementById(`daily-task-${taskIndex}`).value.trim() || `Task ${taskIndex}`; 
-            statusText.innerText = isWorking ? `🎯 Làm: ${taskName}` : "⏳ Nghỉ (5p)"; 
-            updateMiniTimerDisplay();
-
-            // Lưu thời điểm bắt đầu và thời gian còn lại lúc bắt đầu để tính chính xác dù tab bị ẩn
-            const startedAt = Date.now();
-            const startingRemaining = timeRemaining;
-
-            timerInterval = setInterval(() => { 
-                const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-                timeRemaining = Math.max(0, startingRemaining - elapsed);
-                updateMiniTimerDisplay(); 
-
-                if (timeRemaining <= 0) { 
-                    clearInterval(timerInterval); 
-                    timerInterval = null; 
-                    const currentBtn = document.querySelector(`#daily-row-${taskIndex} .row-pomo-btn`); 
-                    if (isWorking) { 
-                        const rowBoxes = document.querySelectorAll(`#daily-row-${taskIndex} .pomo-box`); 
-                        for (let box of rowBoxes) { if (!box.checked) { box.checked = true; saveDailyData(); break; } } 
-                        isWorking = false; 
-                        timeRemaining = 5 * 60; 
-                        statusText.innerText = "⏳ Nghỉ (5p)"; 
-                        updateMiniTimerDisplay(); 
-                        alert(`🎉 Hết 25p! Đã tích 1 phiên cho: ${taskName}. Nghỉ 5 phút nhé.`); 
-                        startCountdown(taskIndex); 
-                    } else { 
-                        isWorking = true; 
-                        timeRemaining = 25 * 60; 
-                        if (currentBtn) currentBtn.classList.remove('running'); 
-                        statusText.innerText = "⏸️ Hết giờ nghỉ"; 
-                        updateMiniTimerDisplay(); 
-                        alert("Hết 5 phút nghỉ! Sẵn sàng quay lại công việc chưa?"); 
-                    } 
-                } 
-            }, 500); // tick 500ms để phản ứng nhanh hơn khi quay lại tab
-        }
 
         // ==========================================
         // FINANCE MODULE
