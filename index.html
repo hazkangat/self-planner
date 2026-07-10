@@ -41,9 +41,9 @@
         .dtask-drag { font-size: 15px; cursor: grab; opacity: 0.5; flex-shrink: 0; }
         .dtask-drag:hover { opacity: 1; }
         .dtask-check { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; }
-        .dtask-body { min-width: 110px; max-width: 220px; cursor: pointer; display: flex; align-items: center; gap: 7px; padding: 3px 4px; border-radius: 6px; transition: 0.15s; flex-shrink: 0; }
+        .dtask-body { flex: 1 1 auto; min-width: 60px; max-width: 320px; cursor: pointer; display: flex; align-items: center; gap: 7px; padding: 3px 4px; border-radius: 6px; transition: 0.15s; }
         .dtask-body:hover { background: rgba(255,255,255,0.6); }
-        .dtask-title { min-width: 0; font-size: 16px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dtask-title { flex: 1; min-width: 0; font-size: 16px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .dtask-card.dragging { opacity: 0.4; }
         .dtask-boxes { display: flex; gap: 6px; flex-wrap: nowrap; margin-left: auto; flex-shrink: 0; }
         .dtask-pomo { width: 18px; height: 18px; margin: 0; cursor: pointer; flex-shrink: 0; }
@@ -282,8 +282,8 @@
             .habit-day-label { width: auto; min-width: 0; justify-content: center; font-size: 11px; display: flex; }
             .habit-box { width: 20px; height: 20px; margin: 0 auto; justify-self: center; }
 
-            .matrix-container { grid-template-columns: 1fr 1fr !important; gap: 10px; margin-bottom: 20px; width: 100%; box-sizing: border-box; }
-            .matrix-box { padding: 12px; border-radius: 10px; min-width: 0; border-width: 1.5px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+            .matrix-container { grid-template-columns: 1fr !important; gap: 14px; margin-bottom: 20px; width: 100%; box-sizing: border-box; }
+            .matrix-box { padding: 16px; border-radius: 10px; min-width: 0; border-width: 1.5px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
             .matrix-box h4 { font-size: 13px; margin-bottom: 8px; padding-bottom: 4px; }
             .matrix-box .task-row { margin-bottom: 6px; padding: 4px 6px; }
             .matrix-box .task-input { font-size: 12px; padding: 2px; }
@@ -1534,10 +1534,9 @@
         }
         document.addEventListener('mouseup', calMouseUp);
 
-        // Cảm ứng (điện thoại): chạm 1 ô tạo event 1 ngày màu vàng
-        function calCellTouchStart(e, day) {
-            createCalEvent(day, day, '#eab308');
-        }
+        // Cảm ứng (điện thoại): KHÔNG tạo sự kiện khi chạm ô ngày (tránh tạo nhầm khi vuốt).
+        // Trên điện thoại dùng nút "➕ Thêm sự kiện" để tạo.
+        function calCellTouchStart(e, day) { /* disabled on mobile */ }
 
         function createCalEvent(start, end, color) {
             const mData = getMonthData();
