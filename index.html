@@ -48,6 +48,20 @@
         .dtask-boxes { display: flex; gap: 6px; flex-wrap: nowrap; margin-left: auto; flex-shrink: 0; }
         .dtask-pomo { width: 18px; height: 18px; margin: 0; cursor: pointer; flex-shrink: 0; }
 
+        /* GENERIC CARD (dùng cho Yearly/Monthly/Matrix) */
+        .gcard { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 8px; margin-bottom: 7px; border: 1px solid rgba(0,0,0,0.05); border-left: 4px solid #94a3b8; background: #f8fafc; transition: 0.2s; min-width: 0; box-sizing: border-box; }
+        .gcard.completed { opacity: 0.55; }
+        .gcard.completed .gcard-title { text-decoration: line-through; color: #94a3b8; }
+        .gcard.dragging { opacity: 0.4; }
+        .gcard-drag { font-size: 14px; cursor: grab; opacity: 0.5; flex-shrink: 0; }
+        .gcard-drag:hover { opacity: 1; }
+        .gcard-check { width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
+        .gcard-body { flex: 1; min-width: 0; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 6px; transition: 0.15s; }
+        .gcard-body:hover { background: rgba(255,255,255,0.6); }
+        .gcard-title { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .gcard-add-btn { background: none; border: 1.5px dashed #cbd5e1; color: #64748b; padding: 7px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; transition: 0.15s; margin-top: 2px; }
+        .gcard-add-btn:hover { border-color: var(--primary); color: var(--primary); background: #eff6ff; }
+
         /* KHUNG ĐẶC BIỆT: Việc quan trọng nhất + Thể dục */
         .special-box { border-radius: 9px; margin-bottom: 8px; padding: 9px; min-height: 50px; display: flex; align-items: center; box-sizing: border-box; transition: 0.2s; }
         .mit-box { border: 2.5px dashed #ef4444; background: #fef2f2; }
@@ -445,6 +459,38 @@
         </div>
     </div>
 
+    <div id="gcard-modal" onclick="if(event.target===this) closeGcardEdit()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:10003; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+        <div style="background:white; padding:24px; border-radius:16px; width:90%; max-width:380px; box-shadow:0 10px 25px rgba(0,0,0,0.15);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">
+                <h3 style="margin:0; color:var(--primary);">✏️ Chỉnh sửa</h3>
+                <button onclick="closeGcardEdit()" style="border:none; background:#f1f5f9; color:#64748b; width:30px; height:30px; border-radius:50%; font-size:14px; cursor:pointer; font-weight:bold;">✖</button>
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">Nội dung</label>
+                <input id="gcard-text" type="text" placeholder="Nhập nội dung..." style="width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:15px; font-weight:600; color:#1e293b; outline:none; box-sizing:border-box; font-family:inherit;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+            <div style="margin-bottom:24px;">
+                <label style="font-size:12px; font-weight:bold; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:12px;">Màu sắc</label>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <div id="gcard-colors" style="display:contents;"></div>
+                    <div style="position:relative; width:34px; height:34px; flex-shrink:0;" title="Màu tuỳ chỉnh">
+                        <input type="color" id="gcard-custompicker" value="#94a3b8"
+                            style="position:absolute; opacity:0; width:34px; height:34px; cursor:pointer; top:0; left:0; border:none; padding:0;"
+                            oninput="document.querySelectorAll('.gcard-swatch').forEach(s=>s.style.borderColor='transparent'); document.getElementById('gcard-picker-circle').style.background=this.value;">
+                        <div id="gcard-picker-circle" style="width:34px; height:34px; border-radius:50%; background:#e2e8f0; border:3px solid transparent; display:flex; align-items:center; justify-content:center; pointer-events:none; box-shadow:0 1px 3px rgba(0,0,0,0.15);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:#64748b;"><path d="M20.71 5.63l-2.34-2.34a1 1 0 0 0-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.41 1.41-6.6 6.6A2 2 0 0 0 5 16v3h3a2 2 0 0 0 1.42-.59l6.6-6.6 1.41 1.42 1.42-1.42-1.42-1.41 3.12-3.12a1 1 0 0 0 0-1.65zM8 17H7v-1l6.59-6.59 1 1z"/></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="saveGcardEdit()" style="flex:1; background:var(--primary); color:white; border:none; padding:11px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">💾 Lưu</button>
+                <button onclick="deleteGcard()" style="background:#fee2e2; color:#ef4444; border:none; padding:11px 14px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">🗑️</button>
+                <button onclick="closeGcardEdit()" style="flex:1; background:#f1f5f9; color:#64748b; border:none; padding:11px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">Huỷ</button>
+            </div>
+        </div>
+    </div>
+
     <div class="sidebar">
         <h2>📔 Self Planner</h2>
         <button class="menu-btn" onclick="switchTab('yearly')">🎯 Goals</button>
@@ -746,6 +792,7 @@
             if (cloudState['diagnostic_test']) { delete cloudState['diagnostic_test']; }
             
             const safe = (label, fn) => { try { fn(); } catch(e) { console.error("Lỗi " + label + ":", e); } };
+            safe('pruneEmptyGcards', pruneEmptyGcards);
             safe('updateYearProgress', updateYearProgress);
             safe('renderYearlyGoals', renderYearlyGoals);
             safe('setupWeeklyDates', setupWeeklyDates);
@@ -812,8 +859,170 @@
 
         // --- YEARLY GOALS ---
         function updateYearProgress() { const now = new Date(); const year = now.getFullYear(); const start = new Date(year, 0, 1); const end = new Date(year + 1, 0, 1); const percent = ((now - start) / (end - start)) * 100; const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24)); document.getElementById('current-year-display').innerText = year; document.getElementById('year-percent-text').innerText = percent.toFixed(1) + '%'; document.getElementById('year-days-left').innerText = `Còn lại ${daysLeft} ngày`; document.getElementById('year-progress-bar').style.width = percent + '%'; }
-        function renderYearlyGoals() { const data = cloudState['yearly_data'] || { word: "", career: [], finance: [], health: [], hobby: [] }; document.getElementById('woy-input').value = data.word || ""; const sections = ['career', 'finance', 'health', 'hobby']; sections.forEach(sec => { let html = ''; const arr = data[sec] || []; for(let i = 0; i < 5; i++) { const rowId = `y-${sec}-${i}`; const item = arr[i] || {done: false, text: ""}; const checked = item.done ? "checked" : ""; const completed = item.done ? "completed" : ""; html += `<div class="task-row ${completed}" id="${rowId}"><input type="checkbox" class="task-done-box" id="${rowId}-done" onchange="toggleTaskDone('${rowId}', this); saveYearly();" ${checked}><input type="text" class="task-input" id="${rowId}-text" placeholder="• Nhập mục tiêu..." value="${item.text.replace(/"/g, '&quot;')}" oninput="saveYearly()"></div>`; } document.getElementById(`g-list-${sec}`).innerHTML = html; }); }
-        function saveYearly() { const data = { word: document.getElementById('woy-input').value, career: [], finance: [], health: [], hobby: [] }; ['career', 'finance', 'health', 'hobby'].forEach(sec => { for(let i=0; i<5; i++) { data[sec].push({ done: document.getElementById(`y-${sec}-${i}-done`).checked, text: document.getElementById(`y-${sec}-${i}-text`).value }); } }); pushToCloud('yearly_data', data); }
+        // ============ MODULE THẺ CHUNG (gcard) ============
+        // Mỗi "list" đăng ký: { get: ()=>array, save: ()=>void, render: ()=>void }
+        // Mỗi item: { id, text, done, color }
+        const gcardLists = {};
+        function registerGcardList(listId, cfg) { gcardLists[listId] = cfg; }
+
+        function gcardEnsure(items) {
+            if (!Array.isArray(items)) return [];
+            items.forEach((it, idx) => {
+                if (!it.id) it.id = 'gc_' + Date.now() + '_' + idx + '_' + Math.floor(Math.random()*10000);
+                if (typeof it.text !== 'string') it.text = '';
+                if (typeof it.done !== 'boolean') it.done = false;
+                if (typeof it.color !== 'string') it.color = '#94a3b8';
+            });
+            return items;
+        }
+
+        // Dọn các thẻ rỗng (không nội dung) - chạy 1 lần khi khởi động để làm sạch dữ liệu cũ
+        function pruneEmptyGcards() {
+            // Yearly
+            const yd = cloudState['yearly_data'];
+            if (yd) { ['career','finance','health','hobby'].forEach(sec => { if (Array.isArray(yd[sec])) yd[sec] = yd[sec].filter(it => (it.text||'').trim() !== ''); }); }
+            // Monthly (tất cả các tháng)
+            for (let k in cloudState) {
+                if (k.startsWith('monthly_') && cloudState[k] && Array.isArray(cloudState[k].goals)) {
+                    cloudState[k].goals = cloudState[k].goals.filter(it => (it.text||'').trim() !== '');
+                }
+                // Weekly matrix
+                if (k.startsWith('weekly_') && cloudState[k] && cloudState[k].matrix) {
+                    ['q1','q2','q3','q4'].forEach(q => { if (Array.isArray(cloudState[k].matrix[q])) cloudState[k].matrix[q] = cloudState[k].matrix[q].filter(it => (it.text||'').trim() !== ''); });
+                }
+                // Daily tasks rỗng
+                if (k.startsWith('daily_') && cloudState[k] && Array.isArray(cloudState[k].tasks)) {
+                    cloudState[k].tasks = cloudState[k].tasks.filter(it => (it.text||'').trim() !== '');
+                }
+            }
+        }
+
+        function buildGcardHTML(listId, it) {
+            const color = it.color || '#94a3b8';
+            const bg = color + '22';
+            const displayText = (it.text || '').trim() || 'Mục mới';
+            return `<div class="gcard ${it.done ? 'completed' : ''}" data-id="${it.id}" draggable="true"
+                ondragstart="gcardDragStart(event,'${listId}','${it.id}')" ondragover="gcardDragOver(event)" ondrop="gcardDrop(event,'${listId}','${it.id}')" ondragend="gcardDragEnd(event)"
+                style="background:${bg}; border-left-color:${color};">
+                <span class="gcard-drag" style="color:${color};">☰</span>
+                <input type="checkbox" class="gcard-check" ${it.done ? 'checked' : ''} onchange="gcardToggleDone('${listId}','${it.id}',this.checked)">
+                <div class="gcard-body" onclick="gcardOpenEdit('${listId}','${it.id}')">
+                    <span class="gcard-title">${displayText}</span>
+                    <span style="font-size:11px; color:#94a3b8; flex-shrink:0;">✏️</span>
+                </div>
+            </div>`;
+        }
+
+        // Render danh sách thẻ vào 1 container; hoàn thành đẩy xuống dưới
+        function renderGcardList(listId, containerId, addLabel) {
+            const cfg = gcardLists[listId];
+            if (!cfg) return;
+            const items = gcardEnsure(cfg.get());
+            const ordered = [...items].sort((a,b) => (a.done===b.done)?0:(a.done?1:-1));
+            let html = '';
+            ordered.forEach(it => { html += buildGcardHTML(listId, it); });
+            html += `<button class="gcard-add-btn" onclick="gcardAdd('${listId}')">➕ ${addLabel || 'Thêm'}</button>`;
+            const el = document.getElementById(containerId);
+            if (el) el.innerHTML = html;
+        }
+
+        function gcardToggleDone(listId, id, done) {
+            const cfg = gcardLists[listId]; const items = cfg.get();
+            const it = items.find(x => x.id === id); if (it) it.done = done;
+            cfg.save(); cfg.render();
+        }
+
+        // Kéo thả
+        let gcardDragCtx = null;
+        function gcardDragStart(e, listId, id) { gcardDragCtx = { listId, id }; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain', id); setTimeout(()=>e.currentTarget.classList.add('dragging'),0); }
+        function gcardDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect='move'; return false; }
+        function gcardDragEnd(e) { e.currentTarget.classList.remove('dragging'); }
+        function gcardDrop(e, listId, dropId) {
+            e.preventDefault(); e.stopPropagation();
+            document.querySelectorAll('.gcard').forEach(c=>c.classList.remove('dragging'));
+            if (!gcardDragCtx || gcardDragCtx.listId !== listId) { gcardDragCtx = null; return; }
+            const fromId = gcardDragCtx.id;
+            if (fromId === dropId) { gcardDragCtx = null; return; }
+            const cfg = gcardLists[listId]; const items = cfg.get();
+            const fromIdx = items.findIndex(x=>x.id===fromId), toIdx = items.findIndex(x=>x.id===dropId);
+            if (fromIdx<0||toIdx<0) { gcardDragCtx=null; return; }
+            const [m] = items.splice(fromIdx,1); items.splice(toIdx,0,m);
+            cfg.save(); gcardDragCtx = null; cfg.render();
+        }
+
+        // Modal chỉnh sửa / thêm
+        let gcardEditCtx = null; // { listId, id | null(new) }
+        function gcardOpenModal(listId, id) {
+            const cfg = gcardLists[listId];
+            const items = cfg.get();
+            const it = id ? items.find(x=>x.id===id) : { text:'', color:'#3b82f6' };
+            gcardEditCtx = { listId, id: id || null };
+            document.getElementById('gcard-text').value = it.text || '';
+            document.getElementById('gcard-custompicker').value = it.color || '#3b82f6';
+            document.getElementById('gcard-picker-circle').style.background = '#e2e8f0';
+            let sw = '';
+            CAL_COLORS.forEach(c => { const sel = (it.color===c); sw += `<div class="gcard-swatch habit-edit-color-swatch" style="background:${c}; border-color:${sel?'#1e293b':'transparent'};" onclick="gcardSelectColor('${c}')"></div>`; });
+            document.getElementById('gcard-colors').innerHTML = sw;
+            document.getElementById('gcard-modal').style.display = 'flex';
+            setTimeout(()=>document.getElementById('gcard-text').focus(), 100);
+        }
+        function gcardOpenEdit(listId, id) { gcardOpenModal(listId, id); }
+        function gcardAdd(listId) { gcardOpenModal(listId, null); }
+        function gcardSelectColor(hex) {
+            document.querySelectorAll('.gcard-swatch').forEach(s => { s.style.borderColor = (s.style.background===hex||s.style.backgroundColor===hex)?'#1e293b':'transparent'; });
+            document.getElementById('gcard-custompicker').value = hex;
+        }
+        function saveGcardEdit() {
+            if (!gcardEditCtx) return;
+            const cfg = gcardLists[gcardEditCtx.listId]; const items = cfg.get();
+            const selSwatch = [...document.querySelectorAll('.gcard-swatch')].find(s => s.style.borderColor === 'rgb(30, 41, 59)');
+            const color = selSwatch ? selSwatch.style.background : document.getElementById('gcard-custompicker').value;
+            const text = document.getElementById('gcard-text').value;
+            if (gcardEditCtx.id) {
+                const it = items.find(x=>x.id===gcardEditCtx.id);
+                if (it) { it.text = text; it.color = color; }
+            } else {
+                items.push({ id: 'gc_'+Date.now()+'_'+Math.floor(Math.random()*10000), text, done:false, color });
+            }
+            cfg.save(); closeGcardEdit(); cfg.render();
+        }
+        function deleteGcard() {
+            if (!gcardEditCtx || !gcardEditCtx.id) { closeGcardEdit(); return; }
+            const cfg = gcardLists[gcardEditCtx.listId];
+            const items = cfg.get();
+            const idx = items.findIndex(x=>x.id===gcardEditCtx.id);
+            if (idx>=0) items.splice(idx,1);
+            cfg.save(); closeGcardEdit(); cfg.render();
+        }
+        function closeGcardEdit() { document.getElementById('gcard-modal').style.display='none'; gcardEditCtx = null; }
+
+        function getYearlyData() {
+            const d = cloudState['yearly_data'] || {};
+            if (typeof d.word !== 'string') d.word = '';
+            ['career','finance','health','hobby'].forEach(sec => {
+                if (!Array.isArray(d[sec])) d[sec] = [];
+                // migrate item cũ {done,text} -> thêm id, color
+                gcardEnsure(d[sec]);
+            });
+            cloudState['yearly_data'] = d;
+            return d;
+        }
+        function renderYearlyGoals() {
+            const data = getYearlyData();
+            document.getElementById('woy-input').value = data.word || "";
+            ['career','finance','health','hobby'].forEach(sec => {
+                renderGcardList('yearly_'+sec, 'g-list-'+sec, 'Thêm mục tiêu');
+            });
+        }
+        function saveYearly() { const data = getYearlyData(); data.word = document.getElementById('woy-input').value; pushToCloud('yearly_data', data); }
+        // Đăng ký 4 list yearly
+        ['career','finance','health','hobby'].forEach(sec => {
+            registerGcardList('yearly_'+sec, {
+                get: () => getYearlyData()[sec],
+                save: () => pushToCloud('yearly_data', getYearlyData()),
+                render: () => renderGcardList('yearly_'+sec, 'g-list-'+sec, 'Thêm mục tiêu')
+            });
+        });
 
         // --- WEEKLY PLANNER ---
         function getWeeklyKey() {
@@ -870,25 +1079,30 @@
             document.getElementById('weekly-date-range').innerText = `${formatDate(monday)} - ${formatDate(sunday)}`; 
         }
         
-        function renderMatrix() { 
-            const matrixData = [ { id: 'q1', title: '🔥 Quan trọng & Khẩn cấp' }, { id: 'q3', title: '⚡ Khẩn cấp, Ko quan trọng' }, { id: 'q2', title: '🌱 Quan trọng, Ko khẩn cấp' }, { id: 'q4', title: '☕ Ko quan trọng, Ko khẩn cấp' } ]; 
+        function renderMatrix() {
+            const matrixData = [ { id: 'q1', title: '🔥 Quan trọng & Khẩn cấp' }, { id: 'q3', title: '⚡ Khẩn cấp, Ko quan trọng' }, { id: 'q2', title: '🌱 Quan trọng, Ko khẩn cấp' }, { id: 'q4', title: '☕ Ko quan trọng, Ko khẩn cấp' } ];
             const wData = cloudState[getWeeklyKey()] || { matrix: {}, habits: [] };
             if(!wData.matrix) wData.matrix = {};
-            matrixData.forEach(box => { 
-                let html = `<h4>${box.title}</h4>`; 
-                const qArr = wData.matrix[box.id] || []; 
-                for(let i = 1; i <= 5; i++) { 
-                    const rowId = `matrix-${box.id}-row-${i}`; 
-                    const item = qArr[i-1] || {done: false, text: ""}; 
-                    const itemText = (item.text || "").replace(/"/g, '&quot;');
-                    const checked = item.done ? "checked" : ""; 
-                    const completed = item.done ? "completed" : ""; 
-                    html += `<div class="task-row ${completed}" id="${rowId}"><input type="checkbox" class="task-done-box" id="${rowId}-done" onchange="toggleTaskDone('${rowId}', this); saveWeekly();" ${checked}><input type="text" class="task-input" id="${rowId}-text" placeholder="Nhập mục ${i}..." value="${itemText}" oninput="saveWeekly()"></div>`; 
-                } 
+            matrixData.forEach(box => {
+                if (!Array.isArray(wData.matrix[box.id])) wData.matrix[box.id] = [];
+                gcardEnsure(wData.matrix[box.id]);
                 const el = document.getElementById(`matrix-${box.id}`);
-                if(el) el.innerHTML = html; 
-            }); 
+                if (el) {
+                    // Giữ tiêu đề h4, render danh sách vào 1 div con
+                    el.innerHTML = `<h4>${box.title}</h4><div id="matrix-list-${box.id}"></div>`;
+                    renderGcardList('matrix_'+box.id, 'matrix-list-'+box.id, 'Thêm mục');
+                }
+            });
+            cloudState[getWeeklyKey()] = wData;
         }
+        // Đăng ký 4 list matrix
+        ['q1','q2','q3','q4'].forEach(q => {
+            registerGcardList('matrix_'+q, {
+                get: () => { const w = cloudState[getWeeklyKey()] || {matrix:{}}; if(!w.matrix) w.matrix={}; if(!Array.isArray(w.matrix[q])) w.matrix[q]=[]; cloudState[getWeeklyKey()]=w; return w.matrix[q]; },
+                save: () => pushToCloud(getWeeklyKey(), cloudState[getWeeklyKey()]),
+                render: () => renderGcardList('matrix_'+q, 'matrix-list-'+q, 'Thêm mục')
+            });
+        });
 
         // BẢNG MÀU CHỌN SẴN
         const HABIT_COLORS = [
@@ -1080,15 +1294,7 @@
             const wKey = getWeeklyKey();
             const data = cloudState[wKey] || { matrix: {}, habits: [] };
             if(!data.matrix) data.matrix = {};
-            ['q1', 'q2', 'q3', 'q4'].forEach(q => {
-                data.matrix[q] = [];
-                for(let i=1; i<=5; i++) {
-                    const doneEl = document.getElementById(`matrix-${q}-row-${i}-done`);
-                    const textEl = document.getElementById(`matrix-${q}-row-${i}-text`);
-                    if(!doneEl || !textEl) { data.matrix[q].push({ done: false, text: "" }); continue; }
-                    data.matrix[q].push({ done: doneEl.checked, text: textEl.value });
-                }
-            });
+            // Matrix giờ được quản lý bằng module gcard (không đọc từ DOM nữa), giữ nguyên data.matrix
             // Habits: cập nhật checkbox theo đúng số lượng habit hiện có (không ép về 5)
             if(!Array.isArray(data.habits)) data.habits = [];
             for(let i=0; i<data.habits.length; i++) {
@@ -1096,7 +1302,6 @@
                 const newDays = [];
                 for(let d=1; d<=7; d++) {
                     const el = document.getElementById(`habit-${i}-day-${d}`);
-                    // Nếu checkbox tồn tại trong DOM thì lấy giá trị, nếu không giữ nguyên giá trị cũ
                     newDays.push(el ? el.checked : (data.habits[i].days ? !!data.habits[i].days[d-1] : false));
                 }
                 data.habits[i].days = newDays;
@@ -1436,8 +1641,13 @@
         function closeCalEvent() { document.getElementById('cal-event-modal').style.display = 'none'; editingEventId = null; calNewMode = false; }
 
         function changeMonth(step) { currentMonthDate.setMonth(currentMonthDate.getMonth() + step); renderMonthlyGoals(); renderCalendar(); }
-        function renderMonthlyGoals() { const monthKey = getMonthKey(); const mData = getMonthData(); const container = document.getElementById('monthly-goals-list'); let html = ''; for(let i = 1; i <= 3; i++) { const rowId = `monthly-goal-${i}`; const item = mData.goals[i-1] || {done: false, text: ""}; const checked = item.done ? "checked" : ""; const completed = item.done ? "completed" : ""; html += `<div class="task-row ${completed}" id="${rowId}"><input type="checkbox" class="task-done-box" id="${rowId}-done" onchange="toggleTaskDone('${rowId}', this); saveMonthly();" ${checked}><input type="text" class="task-input" id="${rowId}-text" placeholder="• Nhập mục tiêu quan trọng ${i}..." style="font-weight: 500;" value="${(item.text||'').replace(/"/g, '&quot;')}" oninput="saveMonthly()"></div>`; } container.innerHTML = html; }
-        function saveMonthly() { const monthKey = getMonthKey(); const data = getMonthData(); data.goals = []; for(let i=1; i<=3; i++) { const de = document.getElementById(`monthly-goal-${i}-done`); const te = document.getElementById(`monthly-goal-${i}-text`); if(de&&te) data.goals.push({ done: de.checked, text: te.value }); } pushToCloud(monthKey, data); }
+        function renderMonthlyGoals() { const mData = getMonthData(); if(!Array.isArray(mData.goals)) mData.goals = []; gcardEnsure(mData.goals); renderGcardList('monthly_goals', 'monthly-goals-list', 'Thêm mục tiêu'); }
+        function saveMonthly() { pushToCloud(getMonthKey(), getMonthData()); }
+        registerGcardList('monthly_goals', {
+            get: () => { const m = getMonthData(); if(!Array.isArray(m.goals)) m.goals = []; return m.goals; },
+            save: () => pushToCloud(getMonthKey(), getMonthData()),
+            render: () => renderGcardList('monthly_goals', 'monthly-goals-list', 'Thêm mục tiêu')
+        });
 
         // Vẽ lại thanh khi đổi kích thước cửa sổ (vì dùng offsetHeight)
         let calResizeTimer = null;
