@@ -968,7 +968,8 @@
         function gcardOpenEdit(listId, id) { gcardOpenModal(listId, id); }
         function gcardAdd(listId) { gcardOpenModal(listId, null); }
         function gcardSelectColor(hex) {
-            document.querySelectorAll('.gcard-swatch').forEach(s => { s.style.borderColor = (s.style.background===hex||s.style.backgroundColor===hex)?'#1e293b':'transparent'; });
+            const target = normColor(hex);
+            document.querySelectorAll('.gcard-swatch').forEach(s => { s.style.borderColor = (normColor(s.style.background||s.style.backgroundColor)===target)?'#1e293b':'transparent'; });
             document.getElementById('gcard-custompicker').value = hex;
         }
         function saveGcardEdit() {
@@ -1260,8 +1261,9 @@
         }
 
         function selectEditColor(hex) {
+            const target = normColor(hex);
             document.querySelectorAll('.habit-edit-color-swatch').forEach(s => {
-                s.style.borderColor = (s.style.background === hex || s.style.backgroundColor === hex) ? '#1e293b' : 'transparent';
+                s.style.borderColor = (normColor(s.style.background || s.style.backgroundColor) === target) ? '#1e293b' : 'transparent';
             });
             document.getElementById('habit-edit-custompicker').value = hex;
         }
@@ -1603,8 +1605,9 @@
             setTimeout(() => document.getElementById('cal-event-text').focus(), 100);
         }
         function selectCalColor(hex) {
+            const target = normColor(hex);
             document.querySelectorAll('.cal-event-swatch').forEach(s => {
-                s.style.borderColor = (s.style.background === hex || s.style.backgroundColor === hex) ? '#1e293b' : 'transparent';
+                s.style.borderColor = (normColor(s.style.background || s.style.backgroundColor) === target) ? '#1e293b' : 'transparent';
             });
             document.getElementById('cal-event-custompicker').value = hex;
         }
@@ -1881,9 +1884,20 @@
             document.getElementById('dtask-modal').style.display = 'flex';
             setTimeout(() => document.getElementById('dtask-text').focus(), 100);
         }
+        // Chuẩn hoá màu về dạng rgb để so sánh (trình duyệt lưu background dưới dạng rgb)
+        function normColor(c) {
+            if (!c) return '';
+            const d = document.createElement('div');
+            d.style.color = c;
+            document.body.appendChild(d);
+            const rgb = getComputedStyle(d).color;
+            document.body.removeChild(d);
+            return rgb;
+        }
         function selectDtaskColor(hex) {
+            const target = normColor(hex);
             document.querySelectorAll('.dtask-swatch').forEach(s => {
-                s.style.borderColor = (s.style.background === hex || s.style.backgroundColor === hex) ? '#1e293b' : 'transparent';
+                s.style.borderColor = (normColor(s.style.background || s.style.backgroundColor) === target) ? '#1e293b' : 'transparent';
             });
             document.getElementById('dtask-custompicker').value = hex;
         }
