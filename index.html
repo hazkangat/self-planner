@@ -490,6 +490,30 @@
         </div>
     </div>
 
+    <div id="timeblock-modal" onclick="if(event.target===this) closeTimeBlock()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:10003; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+        <div style="background:white; padding:20px; border-radius:16px; width:92%; max-width:520px; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 10px 25px rgba(0,0,0,0.15);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">
+                <h3 style="margin:0; color:#8b5cf6;">🕐 Sắp xếp thời gian trong ngày</h3>
+                <button onclick="closeTimeBlock()" style="border:none; background:#f1f5f9; color:#64748b; width:30px; height:30px; border-radius:50%; font-size:14px; cursor:pointer; font-weight:bold;">✖</button>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:flex-end;">
+                <div style="flex:1; min-width:160px;">
+                    <label style="font-size:11px; font-weight:bold; color:#64748b; display:block; margin-bottom:4px;">Chọn task có sẵn</label>
+                    <select id="tb-task-select" onchange="tbPickTask()" style="width:100%; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;"></select>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:flex-end;">
+                <div><label style="font-size:11px; font-weight:bold; color:#64748b; display:block; margin-bottom:4px;">Từ giờ</label>
+                    <select id="tb-start" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></select></div>
+                <div><label style="font-size:11px; font-weight:bold; color:#64748b; display:block; margin-bottom:4px;">Đến giờ</label>
+                    <select id="tb-end" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;"></select></div>
+                <input id="tb-text" type="text" placeholder="Hoặc nhập nội dung..." style="flex:1; min-width:120px; padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                <button onclick="addTimeBlock()" style="background:#8b5cf6; color:white; border:none; padding:9px 14px; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">➕ Thêm</button>
+            </div>
+            <div id="tb-schedule" style="flex:1; overflow-y:auto; border:1px solid #e2e8f0; border-radius:10px; padding:8px; background:#fafafa;"></div>
+        </div>
+    </div>
+
     <div class="sidebar">
         <h2>📔 Self Planner</h2>
         <button class="menu-btn" onclick="switchTab('yearly')">🎯 Goals</button>
@@ -586,9 +610,12 @@
                 </div>
             </div>
             <div class="task-container">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:8px; flex-wrap:wrap;">
                     <h3 style="margin:0;">TASKS OF THE DAY</h3>
-                    <button class="cal-add-event-btn" onclick="addDailyTask()">➕ Thêm task</button>
+                    <div style="display:flex; gap:8px;">
+                        <button class="cal-add-event-btn" style="background:#8b5cf6;" onclick="openTimeBlock()">🕐 Sắp xếp thời gian</button>
+                        <button class="cal-add-event-btn" onclick="addDailyTask()">➕ Thêm task</button>
+                    </div>
                 </div>
                 <!-- Khung việc quan trọng nhất -->
                 <div id="mit-box" class="special-box mit-box" ondragover="mitDragOver(event)" ondragleave="mitDragLeave(event)" ondrop="mitDrop(event)">
@@ -1686,6 +1713,7 @@
             if (typeof d.reviewChecked !== 'boolean') d.reviewChecked = false;
             if (typeof d.mitId === 'undefined') d.mitId = null; // id task được đánh dấu quan trọng nhất
             if (typeof d.exercise === 'undefined') d.exercise = null; // { text, done }
+            if (!Array.isArray(d.timeblocks)) d.timeblocks = []; // [{id,start,end,text,color}]
             d.tasks.forEach((t, idx) => {
                 if (!t.id) t.id = 'dt_' + Date.now() + '_' + idx + '_' + Math.floor(Math.random()*1000);
                 if (typeof t.color !== 'string') t.color = '#94a3b8';
@@ -1832,6 +1860,137 @@
             data.exercise = null;
             pushToCloud(getDailyDateKey(), data);
             renderDailyTasksDOM();
+        }
+
+        // ===== SẮP XẾP THỜI GIAN (TIME BLOCKING) =====
+        const TB_START_HOUR = 5, TB_END_HOUR = 24; // khung giờ hiển thị 5h - 24h
+        const TB_COLORS = ['#3b82f6','#8b5cf6','#22c55e','#eab308','#ef4444','#ec4899','#f97316','#14b8a6'];
+        function fmtHour(h) { return (h < 10 ? '0'+h : h) + ':00'; }
+
+        function openTimeBlock() {
+            // Đổ options giờ
+            const startSel = document.getElementById('tb-start'), endSel = document.getElementById('tb-end');
+            let opts = '';
+            for (let h = TB_START_HOUR; h <= TB_END_HOUR; h++) opts += `<option value="${h}">${fmtHour(h)}</option>`;
+            startSel.innerHTML = opts; endSel.innerHTML = opts;
+            startSel.value = 6; endSel.value = 7;
+            document.getElementById('tb-text').value = '';
+
+            // Đổ danh sách task hiện có (task thường + việc quan trọng + thể dục)
+            const data = getDailyData();
+            const taskSel = document.getElementById('tb-task-select');
+            let tOpts = '<option value="">— Nhập nội dung mới bên dưới —</option>';
+            data.tasks.forEach(t => {
+                const label = (t.text || '').trim();
+                if (label) tOpts += `<option value="task:${t.id}">📝 ${label.replace(/</g,'&lt;')}</option>`;
+            });
+            if (data.exercise && (data.exercise.text||'').trim()) tOpts += `<option value="ex">🏃 ${data.exercise.text.replace(/</g,'&lt;')}</option>`;
+            taskSel.innerHTML = tOpts;
+            taskSel.value = '';
+
+            document.getElementById('timeblock-modal').style.display = 'flex';
+            renderTimeSchedule();
+        }
+
+        // Khi chọn task từ dropdown, điền nội dung + màu vào ô nhập
+        function tbPickTask() {
+            const val = document.getElementById('tb-task-select').value;
+            const data = getDailyData();
+            if (!val) { document.getElementById('tb-text').value = ''; tbPickedColor = null; return; }
+            if (val === 'ex') {
+                document.getElementById('tb-text').value = data.exercise.text;
+                tbPickedColor = '#eab308';
+            } else if (val.startsWith('task:')) {
+                const t = data.tasks.find(x => x.id === val.slice(5));
+                if (t) { document.getElementById('tb-text').value = t.text; tbPickedColor = t.color; }
+            }
+        }
+        let tbPickedColor = null;
+        function closeTimeBlock() { document.getElementById('timeblock-modal').style.display = 'none'; }
+
+        function addTimeBlock() {
+            const start = parseInt(document.getElementById('tb-start').value);
+            const end = parseInt(document.getElementById('tb-end').value);
+            const text = document.getElementById('tb-text').value.trim();
+            if (!text) { alert('Chọn task có sẵn hoặc nhập nội dung.'); return; }
+            if (end <= start) { alert('Giờ kết thúc phải sau giờ bắt đầu.'); return; }
+            const data = getDailyData();
+            const color = tbPickedColor || TB_COLORS[data.timeblocks.length % TB_COLORS.length];
+            data.timeblocks.push({ id: 'tb_'+Date.now()+'_'+Math.floor(Math.random()*1000), start, end, text, color });
+            pushToCloud(getDailyDateKey(), data);
+            document.getElementById('tb-text').value = '';
+            document.getElementById('tb-task-select').value = '';
+            tbPickedColor = null;
+            renderTimeSchedule();
+        }
+        function deleteTimeBlock(id) {
+            const data = getDailyData();
+            data.timeblocks = data.timeblocks.filter(b => b.id !== id);
+            pushToCloud(getDailyDateKey(), data);
+            renderTimeSchedule();
+        }
+
+        function renderTimeSchedule() {
+            const data = getDailyData();
+            const container = document.getElementById('tb-schedule');
+            const rowH = 56; // chiều cao mỗi giờ (px) - to hơn để chứa khối chồng nhau
+            const hours = TB_END_HOUR - TB_START_HOUR;
+            let html = `<div style="position:relative; height:${hours*rowH}px;">`;
+            // Các đường kẻ giờ + nhãn
+            for (let h = TB_START_HOUR; h < TB_END_HOUR; h++) {
+                const top = (h - TB_START_HOUR) * rowH;
+                html += `<div style="position:absolute; top:${top}px; left:0; right:0; height:${rowH}px; border-top:1px solid #e2e8f0; box-sizing:border-box;"></div>`;
+                html += `<div style="position:absolute; top:${top-7}px; left:0; width:52px; text-align:right; font-size:11px; color:#94a3b8; padding-right:6px;">${fmtHour(h)}</div>`;
+            }
+
+            // --- Gán cột cho các khối chồng nhau ---
+            const laneLeft = 58, rightPad = 6;
+            const blocks = [...data.timeblocks].sort((a,b) => a.start - b.start || a.end - b.end);
+            // Tìm các "cụm" khối giao nhau; trong mỗi cụm, gán mỗi khối vào 1 cột không đè
+            blocks.forEach(b => { b._col = 0; b._cols = 1; });
+            // Với mỗi khối, xác định các khối giao với nó
+            function overlaps(a, b) { return a.start < b.end && b.start < a.end; }
+            // Gán cột: duyệt và tìm cột trống đầu tiên trong nhóm giao nhau
+            const groups = [];
+            blocks.forEach(b => {
+                let placed = false;
+                for (const g of groups) {
+                    if (g.some(x => overlaps(x, b))) { g.push(b); placed = true; break; }
+                }
+                if (!placed) groups.push([b]);
+            });
+            // Gộp các group có giao bắc cầu (A giao B, B giao C nhưng A không giao C vẫn cùng nhóm hiển thị)
+            groups.forEach(group => {
+                // gán cột trong group bằng thuật toán interval graph coloring đơn giản
+                const cols = []; // mỗi phần tử = end time lớn nhất của cột đó
+                group.sort((a,b)=>a.start-b.start);
+                group.forEach(b => {
+                    let assigned = -1;
+                    for (let i = 0; i < cols.length; i++) {
+                        if (cols[i] <= b.start) { assigned = i; break; } // cột này đã trống
+                    }
+                    if (assigned === -1) { cols.push(b.end); assigned = cols.length - 1; }
+                    else cols[assigned] = b.end;
+                    b._col = assigned;
+                });
+                const totalCols = cols.length;
+                group.forEach(b => b._cols = totalCols);
+            });
+
+            // --- Vẽ các khối ---
+            blocks.forEach(b => {
+                const top = (b.start - TB_START_HOUR) * rowH + 2;
+                const height = (b.end - b.start) * rowH - 4;
+                const colW = `calc((100% - ${laneLeft + rightPad}px) / ${b._cols})`;
+                const leftPos = `calc(${laneLeft}px + ${b._col} * ${colW} + ${b._col > 0 ? '3px' : '0px'})`;
+                const width = `calc(${colW} - ${b._cols > 1 ? '3px' : '0px'})`;
+                html += `<div style="position:absolute; top:${top}px; left:${leftPos}; width:${width}; height:${height}px; background:${b.color}; border-radius:8px; color:#fff; padding:4px 8px; box-sizing:border-box; overflow:hidden; display:flex; align-items:flex-start; justify-content:space-between; gap:4px;">
+                    <span style="font-size:12px; font-weight:600; line-height:1.25; overflow:hidden;">${b.text}<br><span style="font-size:9px; opacity:0.85; font-weight:normal;">${fmtHour(b.start)}-${fmtHour(b.end)}</span></span>
+                    <button onclick="deleteTimeBlock('${b.id}')" style="border:none; background:rgba(255,255,255,0.85); color:${b.color}; border-radius:50%; width:18px; height:18px; cursor:pointer; font-size:10px; font-weight:bold; flex-shrink:0; line-height:1;">✕</button>
+                </div>`;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
         }
 
         function addDailyTask() {
