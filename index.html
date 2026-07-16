@@ -670,14 +670,14 @@
 
                     <div id="fin-category-set" class="fin-sub-section">
                         <p style="font-size:13px; color:#64748b; margin:0 0 10px 0;">Thêm phân mục mới hoặc chuyển đổi nhóm</p>
-                        <div style="display:flex; gap:6px; margin-bottom: 20px;">
-                            <input type="text" id="new-cat-name" class="fin-input" placeholder="Tên mục mới..." style="flex:1;">
+                        <div style="display:flex; gap:6px; margin-bottom: 20px; flex-wrap: wrap;">
+                            <input type="text" id="new-cat-name" class="fin-input" placeholder="Tên mục mới..." style="flex:1; min-width:140px;">
                             <select id="new-cat-group" class="fin-select" style="max-width:120px;">
                                 <option value="Tiết kiệm/ đầu tư">Tiết kiệm</option>
                                 <option value="Chi phí cố định">Cố định</option>
                                 <option value="Chi phí linh hoạt" selected>Linh hoạt</option>
                             </select>
-                            <button class="fin-btn" style="margin-top:0; padding:10px 15px;" onclick="addNewCategory()">Thêm</button>
+                            <button class="fin-btn" style="margin-top:0; padding:10px 15px; flex-shrink:0;" onclick="addNewCategory()">Thêm</button>
                         </div>
                         <div id="category-list-container" style="overflow-y: auto; max-height: 350px; padding-right: 5px;"></div>
                     </div>
