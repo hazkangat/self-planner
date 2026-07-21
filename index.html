@@ -36,6 +36,10 @@
 
         /* DAILY TASK CARDS (giống habit) */
         .dtask-card { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 9px; margin-bottom: 8px; border: 1px solid rgba(0,0,0,0.05); border-left: 4px solid #94a3b8; transition: 0.2s; background: #f8fafc; min-width: 0; box-sizing: border-box; }
+        /* Kéo thả cảm ứng */
+        .dtask-drag, .gcard-drag { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        .dtask-card.touch-dragging, .gcard.touch-dragging { opacity: 0.85; box-shadow: 0 8px 20px rgba(0,0,0,0.25); transform: scale(1.02); position: relative; z-index: 999; }
+        .touch-drop-target { outline: 2.5px dashed var(--primary); outline-offset: 2px; }
         .dtask-card.completed { opacity: 0.55; }
         .dtask-card.completed .dtask-title { text-decoration: line-through; color: #94a3b8; }
         .dtask-drag { font-size: 15px; cursor: grab; opacity: 0.5; flex-shrink: 0; }
@@ -2327,6 +2331,123 @@
                 }
             } catch(e) {}
         });
+
+        // ===== KÉO THẢ BẰNG CẢM ỨNG (điện thoại) =====
+        // HTML5 drag & drop không chạy trên mobile, nên xử lý bằng touch events.
+        // Chỉ kích hoạt khi chạm vào tay cầm ☰ để không cản trở việc cuộn trang.
+        (function setupTouchDrag() {
+            let dragEl = null;        // phần tử thẻ đang kéo
+            let dragKind = null;      // 'dtask' | 'gcard'
+            let dragId = null;        // id item
+            let dragListId = null;    // với gcard: id của list
+            let placeholderEl = null; // chỗ trống hiển thị vị trí sẽ thả
+            let lastTarget = null;
+
+            function clearHighlights() {
+                document.querySelectorAll('.touch-drop-target').forEach(e => e.classList.remove('touch-drop-target'));
+            }
+
+            document.addEventListener('touchstart', function(e) {
+                const handle = e.target.closest('.dtask-drag, .gcard-drag');
+                if (!handle) return;
+                const card = handle.closest('.dtask-card, .gcard');
+                if (!card) return;
+
+                dragEl = card;
+                if (card.classList.contains('dtask-card')) {
+                    dragKind = 'dtask';
+                    dragId = card.dataset.id;
+                } else {
+                    dragKind = 'gcard';
+                    dragId = card.dataset.id;
+                    // tìm listId từ thuộc tính ondragstart đã gắn
+                    const m = (card.getAttribute('ondragstart')||'').match(/gcardDragStart\(event,'([^']+)'/);
+                    dragListId = m ? m[1] : null;
+                }
+                card.classList.add('touch-dragging');
+                e.preventDefault(); // chặn chọn text / cuộn
+            }, { passive: false });
+
+            document.addEventListener('touchmove', function(e) {
+                if (!dragEl) return;
+                e.preventDefault();
+                const t = e.touches[0];
+                // Di chuyển thẻ theo ngón tay (hiệu ứng nổi)
+                dragEl.style.transform = 'scale(1.02)';
+                // Tìm phần tử dưới ngón tay
+                dragEl.style.pointerEvents = 'none';
+                const under = document.elementFromPoint(t.clientX, t.clientY);
+                dragEl.style.pointerEvents = '';
+                clearHighlights();
+                if (!under) return;
+
+                if (dragKind === 'dtask') {
+                    const mitBox = under.closest('#mit-box');
+                    if (mitBox) { mitBox.classList.add('touch-drop-target'); lastTarget = { type: 'mit' }; return; }
+                    const overCard = under.closest('.dtask-card');
+                    if (overCard && overCard !== dragEl && overCard.dataset.id) {
+                        overCard.classList.add('touch-drop-target');
+                        lastTarget = { type: 'card', id: overCard.dataset.id };
+                        return;
+                    }
+                } else if (dragKind === 'gcard') {
+                    const overCard = under.closest('.gcard');
+                    if (overCard && overCard !== dragEl && overCard.dataset.id) {
+                        overCard.classList.add('touch-drop-target');
+                        lastTarget = { type: 'card', id: overCard.dataset.id };
+                        return;
+                    }
+                }
+                lastTarget = null;
+            }, { passive: false });
+
+            document.addEventListener('touchend', function(e) {
+                if (!dragEl) return;
+                dragEl.classList.remove('touch-dragging');
+                dragEl.style.transform = '';
+                clearHighlights();
+
+                if (lastTarget) {
+                    if (dragKind === 'dtask') {
+                        if (lastTarget.type === 'mit') {
+                            const data = getDailyData();
+                            data.mitId = dragId;
+                            pushToCloud(getDailyDateKey(), data);
+                            renderDailyTasksDOM();
+                        } else if (lastTarget.type === 'card') {
+                            const data = getDailyData();
+                            const fromIdx = data.tasks.findIndex(x => x.id === dragId);
+                            const toIdx = data.tasks.findIndex(x => x.id === lastTarget.id);
+                            if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
+                                const [m] = data.tasks.splice(fromIdx, 1);
+                                data.tasks.splice(toIdx, 0, m);
+                                pushToCloud(getDailyDateKey(), data);
+                                renderDailyTasksDOM();
+                            }
+                        }
+                    } else if (dragKind === 'gcard' && dragListId && lastTarget.type === 'card') {
+                        const cfg = gcardLists[dragListId];
+                        if (cfg) {
+                            const items = cfg.get();
+                            const fromIdx = items.findIndex(x => x.id === dragId);
+                            const toIdx = items.findIndex(x => x.id === lastTarget.id);
+                            if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
+                                const [m] = items.splice(fromIdx, 1);
+                                items.splice(toIdx, 0, m);
+                                cfg.save(); cfg.render();
+                            }
+                        }
+                    }
+                }
+                dragEl = null; dragKind = null; dragId = null; dragListId = null; lastTarget = null;
+            });
+
+            document.addEventListener('touchcancel', function() {
+                if (dragEl) { dragEl.classList.remove('touch-dragging'); dragEl.style.transform = ''; }
+                clearHighlights();
+                dragEl = null; dragKind = null; dragId = null; dragListId = null; lastTarget = null;
+            });
+        })();
 
         window.onload = initCloudApp;
     </script>
